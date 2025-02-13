@@ -1,96 +1,91 @@
 ﻿using Content.Shared.Beeper.Components;
 using Content.Shared.FixedPoint;
 using Content.Shared.Item.ItemToggle;
-using Content.Shared.Item.ItemToggle.Components;
 using Robust.Shared.Audio.Systems;
-using Robust.Shared.Network;
 using Robust.Shared.Timing;
 
 namespace Content.Shared.Beeper.Systems;
 
-
-//This handles generic proximity beeper logic
+/// <summary>
+/// Handles generic beeper logic
+/// </summary>
 public sealed class BeeperSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
-    [Dependency] private readonly INetManager _net = default!;
     [Dependency] private readonly ItemToggleSystem _toggle = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
 
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        SubscribeLocalEvent<BeeperComponent, ComponentInit>(OnInit);
+    }
+
+    private void OnInit(Entity<BeeperComponent> ent, ref ComponentInit args)
+    {
+        var (_, component) = ent;
+
+        UpdateBeepInterval(ent);
+
+        component.NextBeep = _timing.CurTime + component.Interval;
+        Dirty(ent);
+    }
+
     public override void Update(float frameTime)
     {
-        var query = EntityQueryEnumerator<BeeperComponent, ItemToggleComponent>();
-        while (query.MoveNext(out var uid, out var beeper, out var toggle))
+        var query = EntityQueryEnumerator<BeeperComponent>();
+
+        while (query.MoveNext(out var uid, out var beeper))
         {
-            if (toggle.Activated)
-                RunUpdate_Internal(uid, beeper);
+            if (beeper.NextBeep > _timing.CurTime)
+                continue;
+
+            beeper.NextBeep += beeper.Interval;
+            Dirty(uid, beeper);
+
+            if (!_toggle.IsActivated(uid))
+                continue;
+
+            var ev = new BeepPlayedEvent(beeper.IsMuted);
+            RaiseLocalEvent(uid, ref ev);
+
+            if (!beeper.IsMuted)
+                _audio.PlayPredicted(beeper.BeepSound, uid, null);
         }
     }
 
-    public void SetIntervalScaling(EntityUid owner, BeeperComponent beeper, FixedPoint2 newScaling)
+    public void SetIntervalScaling(EntityUid uid, FixedPoint2 newScaling, BeeperComponent? beeper = null)
     {
-        newScaling = FixedPoint2.Clamp(newScaling, 0, 1);
-        beeper.IntervalScaling = newScaling;
-        RunUpdate_Internal(owner, beeper);
-        Dirty(owner, beeper);
-    }
-
-    public void SetInterval(EntityUid owner, BeeperComponent beeper, TimeSpan newInterval)
-    {
-        if (newInterval < beeper.MinBeepInterval)
-            newInterval = beeper.MinBeepInterval;
-        if (newInterval > beeper.MaxBeepInterval)
-            newInterval = beeper.MaxBeepInterval;
-        beeper.Interval = newInterval;
-        RunUpdate_Internal(owner, beeper);
-        Dirty(owner, beeper);
-    }
-
-    public void SetIntervalScaling(EntityUid owner, FixedPoint2 newScaling, BeeperComponent? beeper = null)
-    {
-        if (!Resolve(owner, ref beeper))
+        if (!Resolve(uid, ref beeper))
             return;
-        SetIntervalScaling(owner, beeper, newScaling);
+
+        beeper.IntervalScaling = FixedPoint2.Clamp(newScaling, 0, 1);
+        Dirty(uid, beeper);
+
+        UpdateBeepInterval((uid, beeper));
     }
 
-    public void SetMute(EntityUid owner, bool isMuted, BeeperComponent? comp = null)
+    public void SetMute(EntityUid uid, bool isMuted, BeeperComponent? comp = null)
     {
-        if (!Resolve(owner, ref comp))
+        if (!Resolve(uid, ref comp))
             return;
+
         comp.IsMuted = isMuted;
-        Dirty(owner, comp);
+        Dirty(uid, comp);
     }
 
-    private void UpdateBeepInterval(EntityUid owner, BeeperComponent beeper)
+    private void UpdateBeepInterval(Entity<BeeperComponent> ent)
     {
-        var scalingFactor = beeper.IntervalScaling.Float();
-        var interval = (beeper.MaxBeepInterval - beeper.MinBeepInterval) * scalingFactor + beeper.MinBeepInterval;
-        if (beeper.Interval == interval)
-            return;
-        beeper.Interval = interval;
-        Dirty(owner, beeper);
-    }
+        var (uid, component) = ent;
 
-    public void ForceUpdate(EntityUid owner, BeeperComponent? beeper = null)
-    {
-        if (!Resolve(owner, ref beeper))
-            return;
-        RunUpdate_Internal(owner, beeper);
-    }
+        var scalingFactor = component.IntervalScaling.Float();
+        var interval = (component.MaxBeepInterval - component.MinBeepInterval) * scalingFactor + component.MinBeepInterval;
 
-    private void RunUpdate_Internal(EntityUid owner, BeeperComponent beeper)
-    {
-        if (!_toggle.IsActivated(owner))
+        if (component.Interval == interval)
             return;
 
-        UpdateBeepInterval(owner, beeper);
-        if (beeper.NextBeep >= _timing.CurTime)
-            return;
-
-        var beepEvent = new BeepPlayedEvent(beeper.IsMuted);
-        RaiseLocalEvent(owner, ref beepEvent);
-        if (!beeper.IsMuted && _net.IsServer)
-            _audio.PlayPvs(beeper.BeepSound, owner);
-        beeper.LastBeepTime = _timing.CurTime;
+        component.Interval = interval;
+        Dirty(uid, component);
     }
 }

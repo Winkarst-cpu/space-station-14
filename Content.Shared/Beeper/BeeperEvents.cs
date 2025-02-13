@@ -1,4 +1,9 @@
 ﻿namespace Content.Shared.Beeper;
-[ByRefEvent]
-public record struct BeepPlayedEvent(bool Muted);
 
+/// <summary>
+/// Raised after entity beeped.
+/// </summary>
+[ByRefEvent]
+public readonly record struct BeepPlayedEvent(bool Muted)
+{
+}

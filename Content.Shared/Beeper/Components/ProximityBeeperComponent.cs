@@ -1,8 +1,9 @@
-﻿using Robust.Shared.GameStates;
+﻿namespace Content.Shared.Beeper.Components;
 
-namespace Content.Shared.Beeper.Components;
-
-[RegisterComponent] //component tag for events. If we add support for component pairs on events then this won't be needed anymore!
+/// <summary>
+/// Used for an entity that beeps based on proximity to another entity with specific components/tags.
+/// </summary>
+[RegisterComponent]
 public sealed partial class ProximityBeeperComponent : Component
 {
 }
