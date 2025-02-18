@@ -108,7 +108,7 @@ public sealed class AdminNotesManager : IAdminNotesManager, IPostInjectInit
 
         if (expiryTime is not null)
         {
-            sb.Append($" which expires on {expiryTime.Value.ToUniversalTime(): yyyy-MM-dd HH:mm:ss} UTC");
+            sb.Append($" which expires on {expiryTime.Value.ToUniversalTime(): yyyy-mm-dd} UTC");
         }
 
         _sawmill.Info(sb.ToString());
