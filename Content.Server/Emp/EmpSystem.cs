@@ -6,6 +6,7 @@ using Content.Shared.Emp;
 using Content.Shared.Examine;
 using Robust.Server.GameObjects;
 using Robust.Shared.Map;
+using Robust.Shared.Physics.Events;
 
 namespace Content.Server.Emp;
 
@@ -21,6 +22,7 @@ public sealed class EmpSystem : SharedEmpSystem
         base.Initialize();
         SubscribeLocalEvent<EmpDisabledComponent, ExaminedEvent>(OnExamine);
         SubscribeLocalEvent<EmpOnTriggerComponent, TriggerEvent>(HandleEmpTrigger);
+        SubscribeLocalEvent<EmpOnCollideComponent, StartCollideEvent>(OnCollide);
 
         SubscribeLocalEvent<EmpDisabledComponent, RadioSendAttemptEvent>(OnRadioSendAttempt);
         SubscribeLocalEvent<EmpDisabledComponent, RadioReceiveAttemptEvent>(OnRadioReceiveAttempt);
@@ -106,6 +108,12 @@ public sealed class EmpSystem : SharedEmpSystem
     {
         EmpPulse(_transform.GetMapCoordinates(uid), comp.Range, comp.EnergyConsumption, comp.DisableDuration);
         args.Handled = true;
+    }
+
+    private void OnCollide(Entity<EmpOnCollideComponent> ent, ref StartCollideEvent args)
+    {
+        if (args.OurFixtureId == ent.Comp.Fixture)
+            EmpPulse(_transform.GetMapCoordinates(ent.Owner), ent.Comp.Range, ent.Comp.EnergyConsumption, ent.Comp.DisableDuration);
     }
 
     private void OnRadioSendAttempt(EntityUid uid, EmpDisabledComponent component, ref RadioSendAttemptEvent args)

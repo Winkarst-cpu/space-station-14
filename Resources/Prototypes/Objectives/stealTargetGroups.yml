@@ -84,6 +84,13 @@
     sprite: Objects/Weapons/Guns/Battery/energy_shotgun.rsi
     state: base
 
+- type: stealTargetGroup
+  id: WeaponMWS
+  name: steal-target-groups-weapon-mws
+  sprite:
+    sprite: Objects/Weapons/Guns/Battery/mws.rsi
+    state: base
+
 # Thief Collection
 
 - type: stealTargetGroup

@@ -1,0 +1,17 @@
+{
+    "version": 1,
+    "license": "CC-BY-SA-3.0",
+    "copyright": "Icon and base taken from Citadel Station 13 at https://github.com/Citadel-Station-13/Citadel-Station-13/commit/f95222fee02886d462bb2dc613c6b5136cf3be2f.",
+    "size": {
+        "x": 32,
+        "y": 32
+    },
+    "states": [
+		{
+			"name": "icon"
+		},
+		{
+			"name": "base"
+		}
+    ]
+}
