@@ -12,7 +12,6 @@ using Content.Shared.Mind;
 using Content.Shared.Rejuvenate;
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio.Systems;
-using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
@@ -56,7 +55,6 @@ public abstract class SharedActionsSystem : EntitySystem
         SubscribeLocalEvent<ActionsComponent, RejuvenateEvent>(OnRejuventate);
 
         SubscribeLocalEvent<ActionsComponent, ComponentShutdown>(OnShutdown);
-        SubscribeLocalEvent<ActionsComponent, ComponentGetState>(OnGetState);
 
         SubscribeLocalEvent<ActionComponent, ActionValidateEvent>(OnValidate);
         SubscribeLocalEvent<InstantActionComponent, ActionValidateEvent>(OnInstantValidate);
@@ -96,11 +94,6 @@ public abstract class SharedActionsSystem : EntitySystem
         {
             RemoveAction((ent, ent), actionId);
         }
-    }
-
-    private void OnGetState(Entity<ActionsComponent> ent, ref ComponentGetState args)
-    {
-        args.State = new ActionsComponentState(GetNetEntitySet(ent.Comp.Actions));
     }
 
     /// <summary>

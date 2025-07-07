@@ -1,32 +1,20 @@
-using Content.Shared.Actions;
 using Robust.Shared.GameStates;
-using Robust.Shared.Serialization;
 
 namespace Content.Shared.Actions.Components;
 
 /// <summary>
 /// Lets the player controlling this entity use actions.
 /// </summary>
-[RegisterComponent, NetworkedComponent, Access(typeof(SharedActionsSystem))]
+[RegisterComponent, NetworkedComponent]
+[AutoGenerateComponentState, Access(typeof(SharedActionsSystem))]
 public sealed partial class ActionsComponent : Component
 {
     /// <summary>
     /// List of actions currently granted to this entity.
     /// On the client, this may contain a mixture of client-side and networked entities.
     /// </summary>
-    [DataField]
+    [DataField, AutoNetworkedField]
     public HashSet<EntityUid> Actions = new();
-}
-
-[Serializable, NetSerializable]
-public sealed class ActionsComponentState : ComponentState
-{
-    public readonly HashSet<NetEntity> Actions;
-
-    public ActionsComponentState(HashSet<NetEntity> actions)
-    {
-        Actions = actions;
-    }
 }
 
 /// <summary>
