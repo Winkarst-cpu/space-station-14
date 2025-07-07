@@ -6,7 +6,7 @@ namespace Content.Shared.Actions.Components;
 /// Lets the player controlling this entity use actions.
 /// </summary>
 [RegisterComponent, NetworkedComponent]
-[AutoGenerateComponentState, Access(typeof(SharedActionsSystem))]
+[AutoGenerateComponentState(true), Access(typeof(SharedActionsSystem))]
 public sealed partial class ActionsComponent : Component
 {
     /// <summary>

@@ -53,7 +53,7 @@ namespace Content.Client.Actions
 
             SubscribeLocalEvent<ActionsComponent, LocalPlayerAttachedEvent>(OnPlayerAttached);
             SubscribeLocalEvent<ActionsComponent, LocalPlayerDetachedEvent>(OnPlayerDetached);
-            SubscribeLocalEvent<ActionsComponent, ComponentHandleState>(OnHandleState);
+            SubscribeLocalEvent<ActionsComponent, AfterAutoHandleStateEvent>(OnAfterHandleState);
 
             SubscribeLocalEvent<ActionComponent, AfterAutoHandleStateEvent>(OnActionAutoHandleState);
 
@@ -78,23 +78,19 @@ namespace Content.Client.Actions
             ActionsUpdated?.Invoke();
         }
 
-        private void OnHandleState(Entity<ActionsComponent> ent, ref ComponentHandleState args)
+        private void OnAfterHandleState(Entity<ActionsComponent> ent, ref AfterAutoHandleStateEvent args)
         {
-            if (args.Current is not ActionsComponentState state)
-                return;
-
             var (uid, comp) = ent;
             _added.Clear();
             _removed.Clear();
-            var stateEnts = EnsureEntitySet<ActionsComponent>(state.Actions, uid);
             foreach (var act in comp.Actions)
             {
-                if (!stateEnts.Contains(act) && !IsClientSide(act))
+                if (!comp.Actions.Contains(act) && !IsClientSide(act))
                     _removed.Add(act);
             }
             comp.Actions.ExceptWith(_removed);
 
-            foreach (var actionId in stateEnts)
+            foreach (var actionId in comp.Actions)
             {
                 if (!actionId.IsValid())
                     continue;
