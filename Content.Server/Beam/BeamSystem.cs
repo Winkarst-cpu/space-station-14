@@ -87,7 +87,7 @@ public sealed partial class BeamSystem : SharedBeamSystem
             _fixture.TryCreateFixture(
                     ent,
                     shape,
-                    "BeamBody",
+                    id: "BeamBody",
                     hard: false,
                     collisionMask: (int)CollisionGroup.ItemMask,
                     collisionLayer: (int)CollisionGroup.MobLayer,
