@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Content.Shared.ActionBlocker;
-using Content.Shared.Damage.Systems;
+using Content.Shared.Bed.Sleep;
+using Content.Shared.Damage;
 using Content.Shared.Hands.Components;
 using Content.Shared.Interaction;
 using Content.Shared.Movement.Events;
@@ -40,6 +41,7 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
         SubscribeLocalEvent<DoAfterComponent, ComponentHandleState>(OnDoAfterHandleState);
         SubscribeLocalEvent<DoAfterComponent, EffectiveMoverChangedEvent>(OnEffectiveMoverChanged);
         SubscribeLocalEvent<GetInteractingEntitiesEvent>(OnGetInteractingEntities);
+        SubscribeLocalEvent<DoAfterComponent, FellAsleepEvent>(OnFellAsleep);
     }
 
     private void OnEffectiveMoverChanged(EntityUid uid, DoAfterComponent comp, ref EffectiveMoverChangedEvent args)
@@ -60,6 +62,23 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
 
         if (dirty)
             Dirty(uid, comp);
+    }
+
+    private void OnFellAsleep(Entity<DoAfterComponent> ent, ref FellAsleepEvent args)
+    {
+        var dirty = false;
+
+        foreach (var doAfter in ent.Comp.DoAfters.Values)
+        {
+            if (doAfter.Args.BreakOnLostConsciousness)
+            {
+                InternalCancel(doAfter, ent);
+                dirty = true;
+            }
+        }
+
+        if (dirty)
+            Dirty(ent);
     }
 
     private void OnUnpaused(EntityUid uid, DoAfterComponent component, ref EntityUnpausedEvent args)
