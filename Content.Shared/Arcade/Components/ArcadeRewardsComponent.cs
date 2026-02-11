@@ -8,30 +8,30 @@ namespace Content.Shared.Arcade.Components;
 ///
 /// </summary>
 [RegisterComponent, NetworkedComponent, Access(typeof(SharedArcadeRewardsSystem))]
-[AutoGenerateComponentState(fieldDeltas: true)]
+[AutoGenerateComponentState]
 public sealed partial class ArcadeRewardsComponent : Component
 {
     /// <summary>
     ///
     /// </summary>
-    [DataField(required: true), AutoNetworkedField]
-    public EntityTableSelector Rewards = default!;
+    [DataField(required: true)]
+    public EntityTableSelector Rewards;
+
+    /// <summary>
+    ///
+    /// </summary>
+    [DataField, ViewVariables(VVAccess.ReadOnly)]
+    public int MinAmount;
+
+    /// <summary>
+    ///
+    /// </summary>
+    [DataField, ViewVariables(VVAccess.ReadOnly)]
+    public int MaxAmount;
 
     /// <summary>
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public byte Amount;
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, ViewVariables(VVAccess.ReadOnly), AutoNetworkedField]
-    public byte MaxAmount;
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, ViewVariables(VVAccess.ReadOnly), AutoNetworkedField]
-    public byte MinAmount;
+    public int Amount;
 }

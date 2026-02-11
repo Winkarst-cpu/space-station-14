@@ -4,7 +4,6 @@ using Content.Shared.Arcade.Enums;
 using Content.Shared.Arcade.Events;
 using Content.Shared.EntityTable;
 using Content.Shared.Random.Helpers;
-using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Shared.Arcade.Systems;
@@ -30,7 +29,8 @@ public sealed partial class SharedArcadeRewardsSystem : EntitySystem
         // TODO: Use RandomPredicted https://github.com/space-wizards/RobustToolbox/pull/5849
         var seed = SharedRandomExtensions.HashCodeCombine((int)_timing.CurTick.Value, GetNetEntity(ent).Id);
         var rand = new System.Random(seed);
-        ent.Comp.Amount = rand.NextByte(ent.Comp.MinAmount, ent.Comp.MaxAmount);
+        ent.Comp.Amount = rand.Next(ent.Comp.MinAmount, ent.Comp.MaxAmount);
+        Dirty(ent);
     }
 
     private void OnArcadeChangedState(Entity<ArcadeRewardsComponent> ent, ref ArcadeChangedStateEvent args)
@@ -47,6 +47,6 @@ public sealed partial class SharedArcadeRewardsSystem : EntitySystem
         PredictedSpawnAtPosition(_entityTable.GetSpawns(ent.Comp.Rewards, rand).First().Id, Transform(ent).Coordinates);
 
         ent.Comp.Amount--;
-        DirtyField(ent.AsNullable(), nameof(ArcadeRewardsComponent.Amount));
+        Dirty(ent);
     }
 }

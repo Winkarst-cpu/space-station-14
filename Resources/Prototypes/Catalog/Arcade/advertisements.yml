@@ -1,4 +1,10 @@
 - type: localizedDataset
+  id: LastFighterAds
+  values:
+    prefix: advertisement-last-fighter-
+    count: 1
+
+- type: localizedDataset
   id: BlockGameAds
   values:
     prefix: advertisement-block-game-

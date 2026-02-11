@@ -31,19 +31,19 @@ public sealed partial class SpaceVillainArcadeComponent : Component
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public bool Overflow;
+    public SoundSpecifier? AttackSound = new SoundCollectionSpecifier(DefaultAttackSounds);
 
     /// <summary>
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public bool InvinciblePlayer;
+    public SoundSpecifier? HealSound = new SoundCollectionSpecifier(DefaultHealSounds);
 
     /// <summary>
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public bool InvincibleVillain;
+    public SoundSpecifier? ChargeSound = new SoundCollectionSpecifier(DefaultChargeSounds);
 
     /// <summary>
     ///
@@ -92,22 +92,4 @@ public sealed partial class SpaceVillainArcadeComponent : Component
     /// </summary>
     [DataField, AutoNetworkedField]
     public byte VillainMaxMP = 20;
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public SoundSpecifier? AttackSound = new SoundCollectionSpecifier(DefaultAttackSounds);
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public SoundSpecifier? HealSound = new SoundCollectionSpecifier(DefaultHealSounds);
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public SoundSpecifier? ChargeSound = new SoundCollectionSpecifier(DefaultChargeSounds);
 }

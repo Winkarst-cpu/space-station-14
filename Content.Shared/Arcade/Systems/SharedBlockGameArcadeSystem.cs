@@ -1,11 +1,8 @@
-using System.Diagnostics.CodeAnalysis;
 using Content.Shared.Arcade.Components;
 using Content.Shared.Arcade.Enums;
 using Content.Shared.Arcade.Events;
-using Content.Shared.Input;
 using Content.Shared.Random.Helpers;
-using Robust.Shared.Input.Binding;
-using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -14,95 +11,23 @@ namespace Content.Shared.Arcade.Systems;
 /// <summary>
 ///
 /// </summary>
-public sealed partial class SharedBlockGameArcadeSystem : EntitySystem
+public abstract partial class SharedBlockGameArcadeSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
+    [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly SharedArcadeSystem _arcade = default!;
-    [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
+
+    /// <summary>
+    ///
+    /// </summary>
+    public static Color Empty = new();
 
     public override void Initialize()
     {
         base.Initialize();
 
+        SubscribeLocalEvent<BlockGameArcadeComponent, ComponentInit>(OnComponentInit);
         SubscribeLocalEvent<BlockGameArcadeComponent, ArcadeChangedStateEvent>(OnArcadeChangedState);
-
-        CommandBinds.Builder
-            .Bind(ContentKeyFunctions.ArcadeLeft, InputCmdHandler.FromDelegate(OnMoveLeft))
-            .Bind(ContentKeyFunctions.ArcadeUp, InputCmdHandler.FromDelegate(OnMoveUp))
-            .Bind(ContentKeyFunctions.ArcadeDown, InputCmdHandler.FromDelegate(OnMoveDown))
-            .Bind(ContentKeyFunctions.ArcadeRotate, InputCmdHandler.FromDelegate(OnMoveRotate))
-            .Bind(ContentKeyFunctions.ArcadeDrop, InputCmdHandler.FromDelegate(OnMoveDrop))
-            .Register<SharedBlockGameArcadeSystem>();
-    }
-
-    private void OnArcadeChangedState(Entity<BlockGameArcadeComponent> ent, ref ArcadeChangedStateEvent args)
-    {
-        if (args.NewState != ArcadeGameState.Game)
-            return;
-
-        ent.Comp.NextUpdate = _timing.CurTime + ent.Comp.UpdateCooldown;
-
-        ent.Comp.Cells = new BlockGameArcadeCell[(ent.Comp.Size.X + ent.Comp.BufferWidth) * ent.Comp.Size.Y];
-        Array.Fill(ent.Comp.Cells, BlockGameArcadeCell.Empty);
-
-        // TODO: Use RandomPredicted https://github.com/space-wizards/RobustToolbox/pull/5849
-        var seed = SharedRandomExtensions.HashCodeCombine((int)_timing.CurTick.Value, GetNetEntity(ent).Id);
-        var rand = new System.Random(seed);
-        RandomHelpers.Shuffle(rand, ent.Comp.PiecesBag);
-
-        DirtyFields(ent.AsNullable(), null, nameof(BlockGameArcadeComponent.NextUpdate), nameof(BlockGameArcadeComponent.Cells), nameof(BlockGameArcadeComponent.PiecesBag));
-    }
-
-    private void OnMoveLeft(ICommonSession? session)
-    {
-        ProcessMoveKeyBind(session, BlockGameArcadeMove.Left);
-    }
-
-    private void OnMoveUp(ICommonSession? session)
-    {
-        ProcessMoveKeyBind(session, BlockGameArcadeMove.Up);
-    }
-
-    private void OnMoveDown(ICommonSession? session)
-    {
-        ProcessMoveKeyBind(session, BlockGameArcadeMove.Down);
-    }
-
-    private void OnMoveRotate(ICommonSession? session)
-    {
-        ProcessMoveKeyBind(session, BlockGameArcadeMove.Rotate);
-    }
-
-    private void OnMoveDrop(ICommonSession? session)
-    {
-        ProcessMoveKeyBind(session, BlockGameArcadeMove.Drop);
-    }
-
-    private void ProcessMoveKeyBind(ICommonSession? session, BlockGameArcadeMove direction)
-    {
-        if (session?.AttachedEntity is not { Valid: true } player)
-            return;
-
-        if (!_ui.IsUiOpen(player, ArcadeUiKey.Key))
-            return;
-
-        if (!TryComp<ArcadePlayerComponent>(player, out var comp))
-            return;
-
-        if (comp.Arcade is not { Valid: true } arcade)
-            return;
-
-        if (!TryComp<BlockGameArcadeComponent>(arcade, out var blockGame))
-            return;
-
-        if (blockGame.MoveDirection != BlockGameArcadeMove.None)
-            return;
-
-        if (_arcade.GetGameState(arcade) != ArcadeGameState.Game)
-            return;
-
-        blockGame.MoveDirection = direction;
-        DirtyField(arcade, blockGame, nameof(BlockGameArcadeComponent.MoveDirection));
     }
 
     public override void Update(float frameTime)
@@ -113,110 +38,106 @@ public sealed partial class SharedBlockGameArcadeSystem : EntitySystem
         var query = EntityQueryEnumerator<BlockGameArcadeComponent, ArcadeComponent>();
         while (query.MoveNext(out var uid, out var blockGame, out var arcade))
         {
-            if (_arcade.GetGameState((uid, arcade)) != ArcadeGameState.Game)
+            if (arcade.State != ArcadeGameState.Game)
                 continue;
 
             if (blockGame.NextUpdate > curTime)
                 continue;
 
             blockGame.NextUpdate += blockGame.UpdateCooldown;
-            DirtyField(uid, blockGame, nameof(BlockGameArcadeComponent.NextUpdate));
-
-            if (TryMoveRowLeft((uid, blockGame), 1))
-                continue;
 
             if (TrySpawnNextPiece((uid, blockGame)))
                 continue;
+
+            if (TryMoveFallingPieceDown((uid, blockGame)))
+                TryFreezeFallingPiece((uid, blockGame));
         }
     }
 
-    /// <summary>
-    ///
-    /// </summary>
-    private bool TryCoordinatesToCell(Entity<BlockGameArcadeComponent?> ent, int x, int y, [NotNullWhen(true)] out int? cell)
+    private void OnComponentInit(Entity<BlockGameArcadeComponent> ent, ref ComponentInit args)
     {
-        cell = null;
+        ent.Comp.Grid = new Color[ent.Comp.GridSize.X * ent.Comp.GridSize.Y];
 
-        if (!Resolve(ent, ref ent.Comp))
-            return false;
+    }
 
-        if (x < 0 || x > ent.Comp.Size.X)
-            return false;
+    private void OnArcadeChangedState(Entity<BlockGameArcadeComponent> ent, ref ArcadeChangedStateEvent args)
+    {
+        if (args.NewState != ArcadeGameState.NewGame)
+            return;
 
-        if (y < 0 || y > ent.Comp.Size.Y)
-            return false;
+        ent.Comp.FallingPieceCells = null;
+        ent.Comp.NextUpdate = _timing.CurTime + ent.Comp.UpdateCooldown;
+        ent.Comp.Grid.AsSpan().Clear();
+        ent.Comp.NextBagPiece = 0;
 
-        cell = ent.Comp.Size.X * y + x;
+        // TODO: Use RandomPredicted https://github.com/space-wizards/RobustToolbox/pull/5849
+        var seed = SharedRandomExtensions.HashCodeCombine((int)_timing.CurTick.Value, GetNetEntity(ent).Id);
+        var rand = new System.Random(seed);
+        RandomHelpers.Shuffle(rand, ent.Comp.PiecesBag);
 
-        return true;
+        CreateUIGrid(ent);
     }
 
     /// <summary>
     ///
     /// </summary>
-    private bool TryCellToCoordinates(Entity<BlockGameArcadeComponent?> ent, int cell, [NotNullWhen(true)] out int? x, [NotNullWhen(true)] out int? y)
+    private bool TrySpawnNextPiece(Entity<BlockGameArcadeComponent> ent)
     {
-        x = y = null;
-
-        if (!Resolve(ent, ref ent.Comp))
+        if (ent.Comp.FallingPieceCells != null)
             return false;
 
-        if (cell < 0 || cell > ent.Comp.Size.X * ent.Comp.Size.Y)
-            return false;
-
-        x = cell % ent.Comp.Size.X;
-        y = cell / ent.Comp.Size.X;
-
-        return true;
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    private bool CanRowMoveLeft(Entity<BlockGameArcadeComponent?> ent, int x)
-    {
-        if (!Resolve(ent, ref ent.Comp))
-            return false;
-
-        // We are checking against left row
-        var leftRow = x - 1;
-        for (var y = 0; y < ent.Comp.Size.Y; y++)
+        var protoId = ent.Comp.PiecesBag[ent.Comp.NextBagPiece];
+        if (!_prototypeManager.TryIndex(protoId, out var fallingPiece))
         {
-            if (!TryCoordinatesToCell(ent, leftRow, y, out var cell))
-                return false;
-
-            if (ent.Comp.Cells[cell.Value] != BlockGameArcadeCell.Empty)
-                return false;
+            Log.Error($"Invalid piece prototype {protoId} for {ToPrettyString(ent)}");
+            return false;
         }
 
-        return true;
-    }
+        ent.Comp.FallingPieceCells = new int[fallingPiece.Cells.Length];
 
-    /// <summary>
-    ///
-    /// </summary>
-    private bool TryMoveRowLeft(Entity<BlockGameArcadeComponent?> ent, int x)
-    {
-        if (!Resolve(ent, ref ent.Comp))
-            return false;
+        var width = ent.Comp.GridSize.X;
+        var gridWidthCenter = width / 2;
 
-        // Check if we can move before actually moving
-        if (!CanRowMoveLeft(ent, x))
-            return false;
+        var indexLimit = ent.Comp.Grid.Length - 1;
 
-        var leftRow = x - 1;
-        for (var y = 0; y < ent.Comp.Size.Y; y++)
+        var color = fallingPiece.Color;
+
+        for (var i = 0; i < fallingPiece.Cells.Length; i++)
         {
-            if (!TryCoordinatesToCell(ent, x, y, out var cell))
-                return false;
+            var index = fallingPiece.Cells[i].Y * width + gridWidthCenter + fallingPiece.Cells[i].X;
+            if (index < 0 || index > indexLimit)
+            {
+                Log.Error($"Piece {protoId} can't fit into grid of {ToPrettyString(ent)}");
+                ent.Comp.FallingPieceCells = null;
 
-            if (!TryCoordinatesToCell(ent, leftRow, y, out var leftCell))
                 return false;
+            }
 
-            ent.Comp.Cells[leftCell.Value] = ent.Comp.Cells[cell.Value];
+            ent.Comp.FallingPieceCells[i] = index;
+            ent.Comp.Grid[index] = color;
+
+            UpdateUIGridCell(ent, index, color);
         }
 
-        DirtyField(ent, nameof(BlockGameArcadeComponent.Cells));
+        ent.Comp.FallingPieceColor = color;
+
+        if (++ent.Comp.NextBagPiece >= ent.Comp.PiecesBag.Length - 1)
+        {
+            ent.Comp.NextBagPiece = 0;
+
+            // TODO: Use RandomPredicted https://github.com/space-wizards/RobustToolbox/pull/5849
+            var seed = SharedRandomExtensions.HashCodeCombine((int)_timing.CurTick.Value, GetNetEntity(ent).Id);
+            var rand = new System.Random(seed);
+            RandomHelpers.Shuffle(rand, ent.Comp.PiecesBag);
+
+            //DirtyField(ent.AsNullable(), nameof(BlockGameArcadeComponent.PiecesBag));
+        }
+
+        //DirtyFields(ent.AsNullable(), null,
+        //    nameof(BlockGameArcadeComponent.NextBagPiece),
+        //    nameof(BlockGameArcadeComponent.FallingPieceCells),
+        //    nameof(BlockGameArcadeComponent.Grid),
+        //    nameof(BlockGameArcadeComponent.FallingPieceColor));
 
         return true;
     }
@@ -224,11 +145,110 @@ public sealed partial class SharedBlockGameArcadeSystem : EntitySystem
     /// <summary>
     ///
     /// </summary>
-    private bool TrySpawnNextPiece(Entity<BlockGameArcadeComponent?> ent)
+    private bool TryMoveFallingPieceDown(Entity<BlockGameArcadeComponent> ent)
     {
-        if (!Resolve(ent, ref ent.Comp))
+        if (ent.Comp.FallingPieceCells == null)
             return false;
+
+        if (ent.Comp.FallingPieceColor == null)
+            return false;
+
+        for (var i = 0; i < ent.Comp.FallingPieceCells.Length; i++)
+        {
+            var index = ent.Comp.FallingPieceCells[i];
+            ent.Comp.Grid[index] = Empty;
+            UpdateUIGridCell(ent, index, Empty);
+        }
+
+        for (var i = 0; i < ent.Comp.FallingPieceCells.Length; i++)
+        {
+            var newIndex = ent.Comp.FallingPieceCells[i] + ent.Comp.GridSize.X;
+            ent.Comp.Grid[newIndex] = ent.Comp.FallingPieceColor.Value;
+            UpdateUIGridCell(ent, newIndex, ent.Comp.FallingPieceColor.Value);
+
+            ent.Comp.FallingPieceCells[i] = newIndex;
+        }
+
+        // DirtyFields(ent.AsNullable(), null, nameof(BlockGameArcadeComponent.Grid), nameof(BlockGameArcadeComponent.FallingPieceCells));
 
         return true;
     }
+
+    /// <summary>
+    ///
+    /// </summary>
+    private bool TryFreezeFallingPiece(Entity<BlockGameArcadeComponent> ent)
+    {
+        if (ent.Comp.FallingPieceCells == null)
+            return false;
+
+        for (var i = 0; i < ent.Comp.FallingPieceCells.Length; i++)
+        {
+            var bottomIndex = ent.Comp.FallingPieceCells[i] + ent.Comp.GridSize.X;
+            if (bottomIndex >= ent.Comp.Grid.Length || (ent.Comp.Grid[bottomIndex] != Empty && !ent.Comp.FallingPieceCells.Contains(bottomIndex)))
+            {
+                ent.Comp.FallingPieceCells = null;
+                ent.Comp.FallingPieceColor = null;
+
+                // DirtyFields(ent.AsNullable(), null, nameof(BlockGameArcadeComponent.FallingPieceCells), nameof(BlockGameArcadeComponent.FallingPieceColor));
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    private bool TryShiftRowDown(Entity<BlockGameArcadeComponent> ent, int y)
+    {
+        if (y < 1 || y >= ent.Comp.GridSize.Y - 1)
+            return false;
+
+        // Check if destination row is empty
+        var dstRowStart = (y + 1) * ent.Comp.GridSize.X;
+        for (var x = 0; x < ent.Comp.GridSize.X; x++)
+        {
+            if (ent.Comp.Grid[dstRowStart + x] != Empty)
+                return false;
+        }
+
+        var srcRowStart = y * ent.Comp.GridSize.X;
+
+        var moved = false;
+        for (var x = 0; x < ent.Comp.GridSize.X; x++)
+        {
+            var srcIndex = srcRowStart + x;
+            if (ent.Comp.Grid[srcIndex] == Empty)
+                continue;
+
+            var color = ent.Comp.Grid[srcIndex];
+            var dstIndex = dstRowStart + x;
+
+            ent.Comp.Grid[dstIndex] = color;
+            ent.Comp.Grid[srcIndex] = Empty;
+
+            UpdateUIGridCell(ent, dstIndex, color);
+            UpdateUIGridCell(ent, srcIndex, Empty);
+
+            moved = true;
+        }
+
+        //if (moved)
+        //    DirtyField(ent.AsNullable(), nameof(BlockGameArcadeComponent.Grid));
+
+        return moved;
+    }
+
+    /// <summary>
+    ///
+    /// </summary>
+    protected virtual void CreateUIGrid(Entity<BlockGameArcadeComponent> ent) { }
+
+    /// <summary>
+    ///
+    /// </summary>
+    protected virtual void UpdateUIGridCell(Entity<BlockGameArcadeComponent> ent, int index, Color newColor) { }
 }

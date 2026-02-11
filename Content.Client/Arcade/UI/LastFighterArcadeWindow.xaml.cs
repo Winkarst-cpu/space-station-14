@@ -8,9 +8,9 @@ namespace Content.Client.Arcade.UI;
 ///
 /// </summary>
 [GenerateTypedNameReferences]
-public sealed partial class SpaceVillainArcadeWindow : FancyWindow
+public sealed partial class LastFighterArcadeWindow : FancyWindow
 {
-    public SpaceVillainArcadeWindow()
+    public LastFighterArcadeWindow()
     {
         RobustXamlLoader.Load(this);
     }

@@ -14,12 +14,15 @@ public sealed partial class SharedArcadeSystem : EntitySystem
 {
     [Dependency] private readonly IGameTiming _timing = default!;
     [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private readonly SharedUserInterfaceSystem _ui = default!;
 
     public override void Initialize()
     {
         base.Initialize();
 
-        SubscribeLocalEvent<ArcadeComponent, ArcadeChangedStateEvent>(OnArcadeChangedState);
+        SubscribeLocalEvent<ArcadeEmitSoundOnNewGameComponent, ArcadeChangedStateEvent>(OnArcadeChangedStateNewGame);
+        SubscribeLocalEvent<ArcadeEmitSoundOnWinComponent, ArcadeChangedStateEvent>(OnArcadeChangedStateWin);
+        SubscribeLocalEvent<ArcadeEmitSoundOnLoseComponent, ArcadeChangedStateEvent>(OnArcadeChangedStateLose);
 
         // BUI messages
         SubscribeLocalEvent<ArcadeComponent, ArcadeNewGameMessage>(OnArcadeNewGame);
@@ -31,25 +34,36 @@ public sealed partial class SharedArcadeSystem : EntitySystem
         });
     }
 
-    private void OnArcadeChangedState(Entity<ArcadeComponent> ent, ref ArcadeChangedStateEvent args)
+    private void OnArcadeChangedStateNewGame(Entity<ArcadeEmitSoundOnNewGameComponent> ent, ref ArcadeChangedStateEvent args)
     {
-        switch (args.NewState)
-        {
-            case ArcadeGameState.Game:
-                _audio.PlayPredicted(ent.Comp.NewGameSound, ent, args.Player);
-                break;
-            case ArcadeGameState.Win:
-                _audio.PlayPredicted(ent.Comp.WinSound, ent, args.Player);
-                break;
-            case ArcadeGameState.Lose:
-                _audio.PlayPredicted(ent.Comp.LoseSound, ent, args.Player);
-                break;
-        }
+        if (args.NewState != ArcadeGameState.NewGame)
+            return;
+
+        _audio.PlayPredicted(ent.Comp.Sound, ent, args.Player);
+    }
+
+    private void OnArcadeChangedStateWin(Entity<ArcadeEmitSoundOnWinComponent> ent, ref ArcadeChangedStateEvent args)
+    {
+        if (args.NewState != ArcadeGameState.Win)
+            return;
+
+        _audio.PlayPredicted(ent.Comp.Sound, ent, args.Player);
+    }
+
+    private void OnArcadeChangedStateLose(Entity<ArcadeEmitSoundOnLoseComponent> ent, ref ArcadeChangedStateEvent args)
+    {
+        if (args.NewState != ArcadeGameState.Lose)
+            return;
+
+        _audio.PlayPredicted(ent.Comp.Sound, ent, args.Player);
     }
 
     private void OnArcadeNewGame(Entity<ArcadeComponent> ent, ref ArcadeNewGameMessage args)
     {
-        TryChangeGameState(ent.AsNullable(), args.Actor, ArcadeGameState.Game);
+        if (ent.Comp.Player != args.Actor)
+            return;
+
+        TryChangeGameState(ent, ArcadeGameState.NewGame);
     }
 
     private void OnBUIOpened(Entity<ArcadeComponent> ent, ref BoundUIOpenedEvent args)
@@ -57,10 +71,11 @@ public sealed partial class SharedArcadeSystem : EntitySystem
         if (!_timing.IsFirstTimePredicted)
             return;
 
-        EnsureComp<ArcadePlayerComponent>(args.Actor, out var comp);
+        if (ent.Comp.Player.HasValue)
+            return;
 
-        comp.Arcade = ent;
-        Dirty(args.Actor, comp);
+        ent.Comp.Player = args.Actor;
+        DirtyField(ent.AsNullable(), nameof(ArcadeComponent.Player));
     }
 
     private void OnBUIClosed(Entity<ArcadeComponent> ent, ref BoundUIClosedEvent args)
@@ -68,48 +83,32 @@ public sealed partial class SharedArcadeSystem : EntitySystem
         if (!_timing.IsFirstTimePredicted)
             return;
 
-        RemComp<ArcadePlayerComponent>(args.Actor);
+        if (ent.Comp.Player != args.Actor)
+            return;
+
+        _ui.CloseUi(ent.Owner, ArcadeUiKey.Key);
+
+        ent.Comp.Player = null;
+        DirtyField(ent.AsNullable(), nameof(ArcadeComponent.Player));
     }
 
     /// <summary>
     ///
     /// </summary>
-    public bool TryFinishGame(Entity<ArcadeComponent?> ent, EntityUid? player)
+    public bool TryChangeGameState(Entity<ArcadeComponent> ent, ArcadeGameState newState)
     {
-        return TryChangeGameState(ent, player, ArcadeGameState.Win) || TryChangeGameState(ent, player, ArcadeGameState.Lose);
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    public bool TryChangeGameState(Entity<ArcadeComponent?> ent, EntityUid? player, ArcadeGameState gameState)
-    {
-        if (!Resolve(ent, ref ent.Comp))
+        if (ent.Comp.State == newState)
             return false;
 
-        var checkEv = new ArcadeChangeStateAttempt(player, ent.Comp.State, gameState);
-        RaiseLocalEvent(ent, ref checkEv);
-
-        if (checkEv.Cancelled)
-            return false;
-
-        var ev = new ArcadeChangedStateEvent(player, ent.Comp.State, gameState);
+        var ev = new ArcadeChangedStateEvent(ent.Comp.Player, ent.Comp.State, newState);
         RaiseLocalEvent(ent, ref ev);
 
-        ent.Comp.State = gameState;
-        DirtyField(ent, nameof(ArcadeComponent.State));
+        if (newState == ArcadeGameState.NewGame)
+            return TryChangeGameState(ent, ArcadeGameState.Game);
+
+        ent.Comp.State = newState;
+        DirtyField(ent.AsNullable(), nameof(ArcadeComponent.State));
 
         return true;
-    }
-
-    /// <summary>
-    ///
-    /// </summary>
-    public ArcadeGameState GetGameState(Entity<ArcadeComponent?> ent)
-    {
-        if (!Resolve(ent, ref ent.Comp))
-            return ArcadeGameState.Invalid;
-
-        return ent.Comp.State;
     }
 }

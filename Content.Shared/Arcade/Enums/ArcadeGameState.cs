@@ -8,12 +8,12 @@ public enum ArcadeGameState : byte
     /// <summary>
     ///
     /// </summary>
-    Invalid,
+    Idle,
 
     /// <summary>
     ///
     /// </summary>
-    Idle,
+    NewGame,
 
     /// <summary>
     ///

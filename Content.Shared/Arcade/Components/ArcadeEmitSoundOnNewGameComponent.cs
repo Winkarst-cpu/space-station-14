@@ -1,6 +1,7 @@
-using Content.Shared.Arcade.Enums;
 using Content.Shared.Arcade.Systems;
+using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
+using Robust.Shared.Prototypes;
 
 namespace Content.Shared.Arcade.Components;
 
@@ -8,18 +9,17 @@ namespace Content.Shared.Arcade.Components;
 ///
 /// </summary>
 [RegisterComponent, NetworkedComponent, Access(typeof(SharedArcadeSystem))]
-[AutoGenerateComponentState(fieldDeltas: true)]
-public sealed partial class ArcadeComponent : Component
+[AutoGenerateComponentState]
+public sealed partial class ArcadeEmitSoundOnNewGameComponent : Component
 {
     /// <summary>
     ///
     /// </summary>
-    [DataField, AutoNetworkedField]
-    public EntityUid? Player;
+    private static readonly ProtoId<SoundCollectionPrototype> DefaultSounds = "ArcadeNewGame";
 
     /// <summary>
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public ArcadeGameState State;
+    public SoundSpecifier? Sound = new SoundCollectionSpecifier(DefaultSounds);
 }

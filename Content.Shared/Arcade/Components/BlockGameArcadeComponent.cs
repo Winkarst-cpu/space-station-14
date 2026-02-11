@@ -29,25 +29,25 @@ public sealed partial class BlockGameArcadeComponent : Component
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public BlockGameArcadeMove MoveDirection = BlockGameArcadeMove.None;
-
-    /// <summary>
-    ///
-    /// </summary>
-    [DataField, AutoNetworkedField]
-    public Vector2i Size = new(12, 5);
+    public BlockGameArcadeAction NextAction;
 
     /// <summary>
     ///
     /// </summary>
     [DataField, ViewVariables(VVAccess.ReadOnly), AutoNetworkedField]
-    public uint BufferWidth = 5;
+    public Vector2i GridSize = new(14, 24);
 
     /// <summary>
     ///
     /// </summary>
     [DataField, ViewVariables(VVAccess.ReadOnly), AutoNetworkedField]
-    public uint NextBagPiece = 0;
+    public int[]? FallingPieceCells;
+
+    /// <summary>
+    ///
+    /// </summary>
+    [DataField, ViewVariables(VVAccess.ReadOnly), AutoNetworkedField]
+    public int NextBagPiece = 0;
 
     /// <summary>
     ///
@@ -59,11 +59,11 @@ public sealed partial class BlockGameArcadeComponent : Component
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public BlockGameArcadeCell[]? FallingPiece;
+    public Color? FallingPieceColor;
 
     /// <summary>
     ///
     /// </summary>
     [DataField, AutoNetworkedField]
-    public BlockGameArcadeCell[] Cells = [];
+    public Color[] Grid = [];
 }

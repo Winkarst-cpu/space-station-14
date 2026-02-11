@@ -16,11 +16,11 @@ public sealed partial class BlockGamePiecePrototype : IPrototype
     ///
     /// </summary>
     [DataField(required: true)]
-    public Vector2i Dimensions;
+    public Color Color;
 
     /// <summary>
     ///
     /// </summary>
     [DataField(required: true)]
-    public bool[] Piece = [];
+    public Vector2i[] Cells = [];
 }

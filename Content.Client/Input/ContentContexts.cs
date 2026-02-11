@@ -87,6 +87,7 @@ namespace Content.Client.Input
             human.AddFunction(ContentKeyFunctions.ArcadeUp);
             human.AddFunction(ContentKeyFunctions.ArcadeDown);
             human.AddFunction(ContentKeyFunctions.ArcadeLeft);
+            human.AddFunction(ContentKeyFunctions.ArcadeRight);
             human.AddFunction(ContentKeyFunctions.ArcadeDrop);
             human.AddFunction(ContentKeyFunctions.ArcadeRotate);
 

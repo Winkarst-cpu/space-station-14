@@ -523,15 +523,15 @@ binds:
 - function: ArcadeUp
   type: State
   key: Up
-  priority: -1
 - function: ArcadeDown
   type: State
   key: Down
-  priority: -1
 - function: ArcadeLeft
   type: State
   key: Left
-  priority: -1
+- function: ArcadeRight
+  type: State
+  key: Right
 - function: ArcadeDrop
   type: State
   key: Space

@@ -13,21 +13,10 @@
   - type: LitOnPowered
   - type: Sprite
     sprite: Structures/Machines/arcade.rsi
-    layers:
-    - map: ["computerLayerBody"]
-      state: arcade
-    - map: ["computerLayerScreen"]
-      state: screen_invaders
-    - map: ["enum.WiresVisualLayers.MaintenancePanel"]
-      state: panel
-      visible: false
   - type: Icon
     sprite: Structures/Machines/arcade.rsi
     state: arcade
   - type: WiresPanel
-  - type: Wires
-    layoutId: Arcade
-    boardName: wires-board-name-arcade
   - type: WiresVisuals
   - type: TypingIndicator
     proto: robot
@@ -60,18 +49,19 @@
     hideChat: true
   - type: StationAiWhitelist
   - type: Arcade
+  - type: ArcadeRewards
+    rewards: !type:NestedSelector
+        tableId: SpaceVillainArcadeRewards
 
 - type: entity
   id: SpaceVillainArcade
   name: NT space villain arcade
   parent: ArcadeBase
   components:
-  - type: WiresPanel
   - type: Wires
-    boardName: wires-board-name-arcade
-    layoutId: Arcade
+    boardName: wires-board-name-space-villain
+    layoutId: SpaceVillain
   - type: Sprite
-    sprite: Structures/Machines/arcade.rsi
     layers:
     - map: ["computerLayerBody"]
       state: arcade
@@ -201,12 +191,13 @@
 
 - type: entity
   id: BlockGameArcade
-  description: An arcade cabinet with a strangely familiar game.
-  name: NT block game
+  name: NT block game arcade
   parent: ArcadeBase
   components:
+  - type: Wires
+    boardName: wires-board-name-block-game
+    layoutId: BlockGame
   - type: Sprite
-    sprite: Structures/Machines/arcade.rsi
     layers:
     - map: ["computerLayerBody"]
       state: arcade
@@ -216,20 +207,19 @@
       state: panel
       visible: false
   - type: BlockGameArcade
-    piecesBag: [
-      BlockGamePieceF,
-      BlockGamePieceI,
-      BlockGamePieceL,
-      BlockGamePieceN,
-      BlockGamePieceP,
-      BlockGamePieceT,
-      BlockGamePieceU,
-      BlockGamePieceV,
-      BlockGamePieceW,
-      BlockGamePieceX,
-      BlockGamePieceY,
-      BlockGamePieceZ
-    ]
+    piecesBag:
+    - BlockGamePieceF
+    - BlockGamePieceI
+    - BlockGamePieceL
+    - BlockGamePieceN
+    - BlockGamePieceP
+    - BlockGamePieceT
+    - BlockGamePieceU
+    - BlockGamePieceV
+    - BlockGamePieceW
+    - BlockGamePieceX
+    - BlockGamePieceY
+    - BlockGamePieceZ
   - type: UserInterface
     interfaces:
       enum.ArcadeUiKey.Key:
@@ -243,12 +233,61 @@
   - type: SpeakOnUIClosed
     pack: BlockGameGoodbyes
 
+- type: entity
+  id: BlockGameArcadeFilled
+  parent: BlockGameArcade
+  suffix: Filled
+  components:
+  - type: ArcadeRewards
+    minAmount: 5
+    maxAmount: 8
+
+- type: entity
+  id: LastFighterArcade
+  name: NT last fighter arcade
+  parent: ArcadeBase
+  components:
+  - type: Wires
+    boardName: wires-board-name-last-fighter
+    layoutId: LastFighter
+  - type: Sprite
+    layers:
+    - map: ["computerLayerBody"]
+      state: arcade
+    - map: ["computerLayerScreen"]
+      state: screen_last_fighter
+    - map: ["enum.WiresVisualLayers.MaintenancePanel"]
+      state: panel
+      visible: false
+  - type: LastFighterArcade
+  - type: UserInterface
+    interfaces:
+      enum.ArcadeUiKey.Key:
+        type: LastFighterArcadeBoundUserInterface
+      enum.WiresUiKey.Key:
+        type: WiresBoundUserInterface
+  - type: Computer
+    board: LastFighterArcadeComputerCircuitboard
+  - type: DatasetVocalizer
+    dataset: LastFighterAds
+  - type: SpeakOnUIClosed
+    pack: LastFighterGoodbyes
+
+- type: entity
+  id: LastFighterArcadeFilled
+  parent: LastFighterArcade
+  suffix: Filled
+  components:
+  - type: ArcadeRewards
+    minAmount: 5
+    maxAmount: 8
+
 # Toys table
 - type: entityTable
   id: SpaceVillainArcadeRewards
   table: !type:AllSelector
     children:
-    #Common
+    # Common
     - !type:GroupSelector
       weight: 10
       children:
@@ -323,7 +362,7 @@
       - id: ToyAmongPequeno
       - id: ToyRubberDuck
       - id: WhoopieCushion
-    #Rare
+    # Rare
     - !type:GroupSelector
       weight: 2
       children:

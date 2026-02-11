@@ -1,4 +1,10 @@
 - type: localizedDataset
+  id: LastFighterGoodbyes
+  values:
+    prefix: thankyou-last-fighter-
+    count: 1
+
+- type: localizedDataset
   id: BlockGameGoodbyes
   values:
     prefix: thankyou-block-game-

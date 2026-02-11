@@ -68,6 +68,7 @@ namespace Content.Shared.Input
         public static readonly BoundKeyFunction ArcadeUp = "ArcadeUp";
         public static readonly BoundKeyFunction ArcadeDown = "ArcadeDown";
         public static readonly BoundKeyFunction ArcadeLeft = "ArcadeLeft";
+        public static readonly BoundKeyFunction ArcadeRight = "ArcadeRight";
         public static readonly BoundKeyFunction ArcadeDrop = "ArcadeDrop";
         public static readonly BoundKeyFunction ArcadeRotate = "ArcadeRotate";
 

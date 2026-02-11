@@ -428,7 +428,6 @@
   components:
     - type: ComputerBoard
       prototype: SpaceVillainArcade
-
 - type: entity
   parent: BaseComputerCircuitboard
   id: BlockGameArcadeComputerCircuitboard
@@ -437,6 +436,15 @@
   components:
     - type: ComputerBoard
       prototype: BlockGameArcade
+
+- type: entity
+  parent: BaseComputerCircuitboard
+  id: LastFighterArcadeComputerCircuitboard
+  name: last fighter arcade board
+  description: A computer printed circuit board for a last fighter arcade cabinet.
+  components:
+    - type: ComputerBoard
+      prototype: LastFighterArcade
 
 - type: entity
   parent: BaseComputerCircuitboard

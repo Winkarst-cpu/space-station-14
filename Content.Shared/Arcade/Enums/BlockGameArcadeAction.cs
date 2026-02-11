@@ -3,45 +3,35 @@ namespace Content.Shared.Arcade.Enums;
 /// <summary>
 ///
 /// </summary>
-public enum BlockGameArcadeCell : byte
+public enum BlockGameArcadeAction : byte
 {
     /// <summary>
     ///
     /// </summary>
-    Empty,
+    None,
 
     /// <summary>
     ///
     /// </summary>
-    Red,
+    Down,
 
     /// <summary>
     ///
     /// </summary>
-    Yellow,
+    Left,
 
     /// <summary>
     ///
     /// </summary>
-    Purple,
+    Right,
 
     /// <summary>
     ///
     /// </summary>
-    Blue,
+    Drop,
 
     /// <summary>
     ///
     /// </summary>
-    Orange,
-
-    /// <summary>
-    ///
-    /// </summary>
-    Green,
-
-    /// <summary>
-    ///
-    /// </summary>
-    Brown,
+    Rotate,
 }
