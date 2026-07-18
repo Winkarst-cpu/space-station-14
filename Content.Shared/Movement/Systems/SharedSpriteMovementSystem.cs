@@ -4,7 +4,7 @@ using Content.Shared.Movement.Events;
 
 namespace Content.Shared.Movement.Systems;
 
-public abstract class SharedSpriteMovementSystem : EntitySystem
+public abstract partial class SharedSpriteMovementSystem : EntitySystem
 {
     [Dependency] private ActionBlockerSystem _actionBlocker = default!;
 
