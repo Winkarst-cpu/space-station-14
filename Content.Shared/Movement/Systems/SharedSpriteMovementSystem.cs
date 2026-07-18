@@ -6,7 +6,7 @@ namespace Content.Shared.Movement.Systems;
 
 public abstract class SharedSpriteMovementSystem : EntitySystem
 {
-    [Dependency] private readonly ActionBlockerSystem _actionBlocker = default!;
+    [Dependency] private ActionBlockerSystem _actionBlocker = default!;
 
     public override void Initialize()
     {
