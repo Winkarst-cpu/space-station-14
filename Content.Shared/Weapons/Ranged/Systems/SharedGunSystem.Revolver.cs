@@ -285,6 +285,7 @@ public partial class SharedGunSystem
         var mapCoordinates = TransformSystem.GetMapCoordinates(ent);
         var anyEmpty = false;
 
+        Containers.TryGetOuterContainer(ent, Transform(ent), out var container);
         for (var i = 0; i < ent.Comp.Capacity; i++)
         {
             var chamber = ent.Comp.Chambers[i];
@@ -303,7 +304,7 @@ public partial class SharedGunSystem
                     if (TryComp<CartridgeAmmoComponent>(uid, out var cartridge))
                         SetCartridgeSpent(uid, cartridge, !(bool)chamber);
 
-                    EjectCartridge(uid);
+                    EjectCartridge(uid, ent, container?.Owner);
                 }
 
                 ent.Comp.Chambers[i] = null;
@@ -316,7 +317,7 @@ public partial class SharedGunSystem
                 ent.Comp.Chambers[i] = null;
 
                 if (!_netManager.IsClient)
-                    EjectCartridge(slot.Value);
+                    EjectCartridge(slot.Value, ent, container?.Owner);
 
                 anyEmpty = true;
             }

@@ -86,6 +86,27 @@ public abstract partial class SharedGunSystem : EntitySystem
     private const float InteractNextFire = 0.3f;
     private const double SafetyNextFire = 0.5;
     private const float EjectOffset = 0.4f;
+
+    /// <summary>
+    /// Ejecting cartridge angle offset.
+    /// </summary>
+    private const float EjectAngleOffset = 3.7f; // 212 degrees; casings should eject slightly to the right and behind of a gun
+
+    /// <summary>
+    /// Ejecting cartridge velocity multiplier.
+    /// </summary>
+    private const float EjectVelocityMultiplier = 0.01f;
+
+    /// <summary>
+    /// Ejecting cartridge inertia vector multiplier.
+    /// </summary>
+    private const float InertiaMultiplier = 0.4f;
+
+    /// <summary>
+    /// Cartridge ejection speed.
+    /// </summary>
+    private const float EjectSpeed = 5f;
+
     protected const string AmmoExamineColor = "yellow";
     protected const string FireRateExamineColor = "yellow";
     public const string ModeExamineColor = "cyan";
@@ -488,6 +509,8 @@ public abstract partial class SharedGunSystem : EntitySystem
     /// </summary>
     protected void EjectCartridge(
         EntityUid entity,
+        EntityUid gun,
+        EntityUid? holder = null,
         Angle? angle = null,
         bool playSound = true)
     {
@@ -501,13 +524,17 @@ public abstract partial class SharedGunSystem : EntitySystem
         TransformSystem.SetLocalRotation(entity, Random.NextAngle(), xform);
         TransformSystem.SetCoordinates(entity, xform, coordinates);
 
-        // decides direction the casing ejects and only when not cycling
-        if (angle != null)
-        {
-            var ejectAngle = angle.Value;
-            ejectAngle += 3.7f; // 212 degrees; casings should eject slightly to the right and behind of a gun
-            ThrowingSystem.TryThrow(entity, ejectAngle.ToVec().Normalized() / 100, 5f);
-        }
+        var ejectAngle = Angle.Zero;
+        if (angle.HasValue)
+            ejectAngle += angle.Value + EjectAngleOffset;
+
+        // Try applying the holder or gun velocity
+        var inertia = Vector2.Zero;
+        if (TryComp<PhysicsComponent>(holder ?? gun, out var body))
+            inertia += body.LinearVelocity;
+
+        ThrowingSystem.TryThrow(entity, ejectAngle.ToVec().Normalized() * EjectVelocityMultiplier + inertia * InertiaMultiplier, EjectSpeed);
+
         if (playSound && TryComp<CartridgeAmmoComponent>(entity, out var cartridge))
         {
             Audio.PlayPvs(cartridge.EjectSound, entity, AudioParams.Default.WithVariation(SharedContentAudioSystem.DefaultVariation).WithVolume(-1f));

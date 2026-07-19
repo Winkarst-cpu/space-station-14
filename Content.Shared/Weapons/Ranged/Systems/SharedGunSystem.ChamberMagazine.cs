@@ -104,7 +104,8 @@ public abstract partial class SharedGunSystem
         {
             if (_netManager.IsServer)
             {
-                EjectCartridge(chamberEnt.Value);
+                Containers.TryGetOuterContainer(uid, Transform(uid), out var container);
+                EjectCartridge(chamberEnt.Value, uid, container?.Owner);
             }
             else
             {
@@ -174,7 +175,8 @@ public abstract partial class SharedGunSystem
             {
                 if (_netManager.IsServer)
                 {
-                    EjectCartridge(chambered.Value);
+                    Containers.TryGetOuterContainer(uid, Transform(uid), out var container);
+                    EjectCartridge(chambered.Value, uid, container?.Owner);
                 }
                 else
                 {

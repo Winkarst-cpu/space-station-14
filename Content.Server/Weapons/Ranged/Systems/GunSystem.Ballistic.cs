@@ -29,7 +29,10 @@ public sealed partial class GunSystem
         }
 
         if (ammoEnt != null)
-            EjectCartridge(ammoEnt.Value);
+        {
+            Containers.TryGetOuterContainer(ent, Transform(ent), out var container);
+            EjectCartridge(ammoEnt.Value, ent, container?.Owner);
+        }
 
         var cycledEvent = new GunCycledEvent();
         RaiseLocalEvent(ent, ref cycledEvent);
