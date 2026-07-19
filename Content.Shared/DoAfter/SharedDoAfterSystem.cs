@@ -7,6 +7,7 @@ using Content.Shared.Hands.Components;
 using Content.Shared.Interaction;
 using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
+using Content.Shared.Stunnable;
 using Content.Shared.Tag;
 using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
@@ -41,7 +42,8 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
         SubscribeLocalEvent<DoAfterComponent, ComponentHandleState>(OnDoAfterHandleState);
         SubscribeLocalEvent<DoAfterComponent, EffectiveMoverChangedEvent>(OnEffectiveMoverChanged);
         SubscribeLocalEvent<GetInteractingEntitiesEvent>(OnGetInteractingEntities);
-        SubscribeLocalEvent<DoAfterComponent, FellAsleepEvent>(OnFellAsleep);
+        SubscribeLocalEvent<DoAfterComponent, SleepStateChangedEvent>(OnFellAsleep);
+        SubscribeLocalEvent<DoAfterComponent, StunnedEvent>(OnStunned);
     }
 
     private void OnEffectiveMoverChanged(EntityUid uid, DoAfterComponent comp, ref EffectiveMoverChangedEvent args)
@@ -64,17 +66,35 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
             Dirty(uid, comp);
     }
 
-    private void OnFellAsleep(Entity<DoAfterComponent> ent, ref FellAsleepEvent args)
+    private void OnStunned(Entity<DoAfterComponent> ent, ref StunnedEvent args)
     {
         var dirty = false;
-
         foreach (var doAfter in ent.Comp.DoAfters.Values)
         {
-            if (doAfter.Args.BreakOnLostConsciousness)
-            {
-                InternalCancel(doAfter, ent);
-                dirty = true;
-            }
+            if (!doAfter.Args.BreakOnStun)
+                continue;
+
+            InternalCancel(doAfter, ent);
+            dirty = true;
+        }
+
+        if (dirty)
+            Dirty(ent);
+    }
+
+    private void OnFellAsleep(Entity<DoAfterComponent> ent, ref SleepStateChangedEvent args)
+    {
+        if (!args.FellAsleep)
+            return;
+
+        var dirty = false;
+        foreach (var doAfter in ent.Comp.DoAfters.Values)
+        {
+            if (!doAfter.Args.BreakOnLostConsciousness)
+                continue;
+
+            InternalCancel(doAfter, ent);
+            dirty = true;
         }
 
         if (dirty)

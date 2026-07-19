@@ -119,6 +119,12 @@ public sealed partial class DoAfterArgs
     public bool BreakOnLostConsciousness = true;
 
     /// <summary>
+    /// Whether to break if the user is stunned.
+    /// </summary>
+    [DataField]
+    public bool BreakOnStun = true;
+
+    /// <summary>
     ///     Threshold for user and target movement
     /// </summary>
     [DataField]
