@@ -65,13 +65,16 @@ public sealed partial class HealthExaminableSystem : EntitySystem
                 continue;
 
             var chosenLocStr = string.Empty;
-            for (var i = 0; i < component.Thresholds.Length; i++)
+            for (var i = component.Thresholds.Length - 1; i >= 0; i--)
             {
                 if (component.Thresholds[i] > dmg)
-                    break;
+                    continue;
 
-                if (Loc.TryGetString($"health-examinable-{component.LocPrefix}-{type}-{i}", out var locStr, ("target", Identity.Entity(uid, EntityManager))))
-                    chosenLocStr = locStr;
+                if (!Loc.TryGetString($"health-examinable-{component.LocPrefix}-{type}-{i}", out var locStr, ("target", Identity.Entity(uid, EntityManager))))
+                    continue;
+
+                chosenLocStr = locStr;
+                break;
             }
 
             // No threshold string was found
