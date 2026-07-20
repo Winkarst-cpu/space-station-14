@@ -15,5 +15,5 @@ public sealed partial class FamiliarComponent : Component
     /// The entity this familiar was summoned from.
     /// </summary>
     [ViewVariables, AutoNetworkedField]
-    public EntityUid? Source;
+    public EntityUid Source;
 }

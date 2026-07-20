@@ -39,7 +39,7 @@ public sealed partial class SummonableComponent : Component
     /// The specific creature this summoned, if the SpecialItemPrototype has a mobstate.
     /// </summary>
     [ViewVariables, AutoNetworkedField]
-    public EntityUid? SummonedEntity;
+    public EntityUid SummonedEntity;
 
     /// <summary>
     /// The created summon action.

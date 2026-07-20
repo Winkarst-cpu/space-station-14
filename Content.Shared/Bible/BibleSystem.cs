@@ -14,6 +14,7 @@ using Content.Shared.Timing;
 using Content.Shared.Verbs;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Map;
+using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
@@ -34,6 +35,7 @@ public abstract partial class SharedBibleSystem : EntitySystem
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private UseDelaySystem _delay = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private INetManager _net = default!;
     [Dependency] private IGameTiming _timing = default!;
 
     /// <inheritdoc/>
@@ -62,20 +64,16 @@ public abstract partial class SharedBibleSystem : EntitySystem
                 continue;
 
             // Delete old summoned entity.
-            if (summonableComp.SummonedEntity.HasValue)
-            {
+            if (Exists(summonableComp.SummonedEntity))
                 PredictedDel(summonableComp.SummonedEntity);
-                summonableComp.SummonedEntity = null;
-            }
 
             summonableComp.CanSummon = true;
             Dirty(uid, summonableComp);
 
-            if (_timing.IsFirstTimePredicted)
-            {
-                _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+            _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+
+            if (_net.IsServer)
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
-            }
 
             RemComp(uid, respawningComponent);
         }
@@ -201,10 +199,10 @@ public abstract partial class SharedBibleSystem : EntitySystem
         if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
             return;
 
-        AddComp<SummonableRespawningComponent>(ent.Comp.Source.Value);
+        AddComp<SummonableRespawningComponent>(ent.Comp.Source);
 
         summonable.RespawnTime = _timing.CurTime + summonable.RespawnCooldown;
-        Dirty(ent.Comp.Source.Value, summonable);
+        Dirty(ent.Comp.Source, summonable);
     }
 
     /// <summary>
