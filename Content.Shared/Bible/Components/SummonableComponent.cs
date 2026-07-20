@@ -60,10 +60,22 @@ public sealed partial class SummonableComponent : Component
     public bool CanSummon = true;
 
     /// <summary>
-    /// Localization prefix for component to use.
+    /// Loc string for the summon alt-verb text.
     /// </summary>
     [DataField]
-    public string LocPrefix = "bible";
+    public string SummonVerbText = "bible-summon-verb";
+
+    /// <summary>
+    /// Loc string shown when a summon has been requested and is awaiting a soul.
+    /// </summary>
+    [DataField]
+    public string SummonRequestedText = "bible-summon-requested";
+
+    /// <summary>
+    /// Loc string shown when the familiar has respawned and is ready to summon again.
+    /// </summary>
+    [DataField]
+    public string SummonRespawnReadyText = "bible-summon-respawn-ready";
 
     /// <summary>
     /// Cooldown before being able to summon a new entity.

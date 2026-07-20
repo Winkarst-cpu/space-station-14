@@ -60,7 +60,7 @@ public sealed partial class BibleSystem : EntitySystem
 
             if (_net.IsServer)
             {
-                _popup.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+                _popup.PopupEntity(Loc.GetString(summonableComp.SummonRespawnReadyText, ("book", uid)), uid, PopupType.Medium);
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
             }
 
@@ -80,10 +80,13 @@ public sealed partial class BibleSystem : EntitySystem
         if (args.Target == null || args.Target == args.User || !_mobState.IsAlive(args.Target.Value))
             return;
 
+        var userEnt = Identity.Entity(args.User, EntityManager);
+        var targetEnt = Identity.Entity(args.Target.Value, EntityManager);
+
         // Sizzle user if they are not a Bible user.
         if (!HasComp<BibleUserComponent>(args.User))
         {
-            _popup.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-sizzle"), args.User, args.User);
+            _popup.PopupEntity(Loc.GetString(ent.Comp.SizzleText, ("user", userEnt), ("target", targetEnt), ("bible", ent)), args.User, args.User);
 
             _audio.PlayPredicted(ent.Comp.SizzleSound, ent, args.User);
             _damageable.TryChangeDamage(args.User, ent.Comp.DamageOnUntrainedUse, true, origin: ent);
@@ -92,19 +95,16 @@ public sealed partial class BibleSystem : EntitySystem
             return;
         }
 
-        var userEnt = Identity.Entity(args.User, EntityManager);
-        var targetEnt = Identity.Entity(args.Target.Value, EntityManager);
-
         // This only has a chance to fail if the target is not wearing anything on their head and is not a familiar.
         if (!_inventory.TryGetSlotEntity(args.Target.Value, "head", out _) && !HasComp<FamiliarComponent>(args.Target.Value))
         {
             var rand = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(ent));
             if (rand.Prob(ent.Comp.FailChance))
             {
-                var othersFailMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-fail-others", ("user", userEnt), ("target", targetEnt), ("bible", ent));
+                var othersFailMessage = Loc.GetString(ent.Comp.HealFailOthersText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
                 _popup.PopupEntity(othersFailMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.SmallCaution);
 
-                var selfFailMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-fail-self", ("target", targetEnt), ("bible", ent));
+                var selfFailMessage = Loc.GetString(ent.Comp.HealFailSelfText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
                 _popup.PopupEntity(selfFailMessage, args.User, args.User, PopupType.MediumCaution);
 
                 _audio.PlayPredicted(ent.Comp.BibleHitSound, ent, args.User);
@@ -120,8 +120,8 @@ public sealed partial class BibleSystem : EntitySystem
 
         if (_damageable.TryChangeDamage(args.Target.Value, ent.Comp.Damage, true, origin: ent))
         {
-            othersMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-others", ("user", userEnt), ("target", targetEnt), ("bible", ent));
-            selfMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-self", ("target", targetEnt), ("bible", ent));
+            othersMessage = Loc.GetString(ent.Comp.HealSuccessOthersText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
+            selfMessage = Loc.GetString(ent.Comp.HealSuccessSelfText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
 
             _audio.PlayPredicted(ent.Comp.HealSound, ent, args.User);
             _delay.TryResetDelay((ent, useDelay));
@@ -131,8 +131,8 @@ public sealed partial class BibleSystem : EntitySystem
         }
         else
         {
-            othersMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-none-others", ("user", userEnt), ("target", targetEnt), ("bible", ent));
-            selfMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-none-self", ("target", targetEnt), ("bible", ent));
+            othersMessage = Loc.GetString(ent.Comp.HealSuccessNoneOthersText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
+            selfMessage = Loc.GetString(ent.Comp.HealSuccessNoneSelfText, ("user", userEnt), ("target", targetEnt), ("bible", ent));
         }
 
         _popup.PopupEntity(othersMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.Medium);
@@ -152,7 +152,7 @@ public sealed partial class BibleSystem : EntitySystem
             {
                 AttemptSummon(ent, user);
             },
-            Text = Loc.GetString(ent.Comp.LocPrefix + "-summon-verb"),
+            Text = Loc.GetString(ent.Comp.SummonVerbText),
             Priority = 2
         };
         args.Verbs.Add(verb);
@@ -188,8 +188,6 @@ public sealed partial class BibleSystem : EntitySystem
         if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
             return;
 
-        summonable.SummonedEntity = EntityUid.Invalid;
-        Dirty(ent.Comp.Source, summonable);
         StartRespawnTimer(ent, summonable);
     }
 
@@ -215,7 +213,7 @@ public sealed partial class BibleSystem : EntitySystem
     /// </summary>
     private void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
     {
-        if (!Resolve(ent.Comp.Source, ref summonable, false))
+        if (!Exists(ent.Comp.Source) || !Resolve(ent.Comp.Source, ref summonable, false))
             return;
 
         AddComp<SummonableRespawningComponent>(ent.Comp.Source);
@@ -252,7 +250,7 @@ public sealed partial class BibleSystem : EntitySystem
         // If this is going to use a ghost role mob spawner, attach it to the bible.
         if (HasComp<GhostRoleMobSpawnerComponent>(familiar))
         {
-            _popup.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-summon-requested"), user, user, PopupType.Medium);
+            _popup.PopupEntity(Loc.GetString(ent.Comp.SummonRequestedText), user, user, PopupType.Medium);
             _transform.SetParent(familiar, ent);
         }
         else

@@ -70,10 +70,46 @@ public sealed partial class BibleComponent : Component
     public float FailChance = 0.34f;
 
     /// <summary>
-    /// Localization prefix for Bible to use.
+    /// Loc string played when a non-chaplain attempts to use the bible.
     /// </summary>
     [DataField]
-    public string LocPrefix = "bible";
+    public string SizzleText = "bible-sizzle";
+
+    /// <summary>
+    /// Loc string shown to others when the bible fails to heal the target.
+    /// </summary>
+    [DataField]
+    public string HealFailOthersText = "bible-heal-fail-others";
+
+    /// <summary>
+    /// Loc string shown to the user when the bible fails to heal the target.
+    /// </summary>
+    [DataField]
+    public string HealFailSelfText = "bible-heal-fail-self";
+
+    /// <summary>
+    /// Loc string shown to others when the bible successfully heals the target.
+    /// </summary>
+    [DataField]
+    public string HealSuccessOthersText = "bible-heal-success-others";
+
+    /// <summary>
+    /// Loc string shown to the user when the bible successfully heals the target.
+    /// </summary>
+    [DataField]
+    public string HealSuccessSelfText = "bible-heal-success-self";
+
+    /// <summary>
+    /// Loc string shown to others when the bible hits a target without wounds.
+    /// </summary>
+    [DataField]
+    public string HealSuccessNoneOthersText = "bible-heal-success-none-others";
+
+    /// <summary>
+    /// Loc string shown to the user when the bible hits a target without wounds.
+    /// </summary>
+    [DataField]
+    public string HealSuccessNoneSelfText = "bible-heal-success-none-self";
 
     /// <summary>
     /// A short light effect to display when successfully healing someone.
