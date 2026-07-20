@@ -2,6 +2,7 @@ using Content.Shared.ActionBlocker;
 using Content.Shared.Actions;
 using Content.Shared.Bible.Components;
 using Content.Shared.Damage.Systems;
+using Content.Shared.Ghost;
 using Content.Shared.Ghost.Roles.Components;
 using Content.Shared.IdentityManagement;
 using Content.Shared.Interaction;
@@ -13,7 +14,6 @@ using Content.Shared.Random.Helpers;
 using Content.Shared.Timing;
 using Content.Shared.Verbs;
 using Robust.Shared.Audio.Systems;
-using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
@@ -24,7 +24,7 @@ namespace Content.Shared.Bible;
 /// <summary>
 /// Logic for the Bible components.
 /// </summary>
-public abstract partial class SharedBibleSystem : EntitySystem
+public sealed partial class SharedBibleSystem : EntitySystem
 {
     [Dependency] private ActionBlockerSystem _blocker = default!;
     [Dependency] private DamageableSystem _damageableSystem = default!;
@@ -37,18 +37,6 @@ public abstract partial class SharedBibleSystem : EntitySystem
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private INetManager _net = default!;
     [Dependency] private IGameTiming _timing = default!;
-
-    /// <inheritdoc/>
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<BibleComponent, AfterInteractEvent>(OnAfterInteract);
-        SubscribeLocalEvent<SummonableComponent, GetVerbsEvent<AlternativeVerb>>(AddSummonVerb);
-        SubscribeLocalEvent<SummonableComponent, GetItemActionsEvent>(GetSummonAction);
-        SubscribeLocalEvent<SummonableComponent, SummonActionEvent>(OnSummon);
-        SubscribeLocalEvent<FamiliarComponent, MobStateChangedEvent>(OnFamiliarDeath);
-    }
 
     /// <summary>
     /// This handles familiar respawning.
@@ -75,10 +63,11 @@ public abstract partial class SharedBibleSystem : EntitySystem
             if (_net.IsServer)
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
 
-            RemComp(uid, respawningComponent);
+            RemCompDeferred(uid, respawningComponent);
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnAfterInteract(Entity<BibleComponent> ent, ref AfterInteractEvent args)
     {
         if (!args.CanReach)
@@ -137,7 +126,7 @@ public abstract partial class SharedBibleSystem : EntitySystem
             _delay.TryResetDelay((ent, useDelay));
 
             if (ent.Comp.HealingLightEffect.HasValue)
-                Spawn(ent.Comp.HealingLightEffect.Value, new EntityCoordinates(args.Target.Value, default));
+                PredictedSpawnAtPosition(ent.Comp.HealingLightEffect.Value, Transform(args.Target.Value).Coordinates);
         }
         else
         {
@@ -149,6 +138,7 @@ public abstract partial class SharedBibleSystem : EntitySystem
         _popupSystem.PopupEntity(selfMessage, args.User, args.User, PopupType.Large);
     }
 
+    [SubscribeLocalEvent]
     private void AddSummonVerb(Entity<SummonableComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
     {
         if (!args.CanInteract || !args.CanAccess || !ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
@@ -170,19 +160,26 @@ public abstract partial class SharedBibleSystem : EntitySystem
         args.Verbs.Add(verb);
     }
 
+    [SubscribeLocalEvent]
     private void GetSummonAction(Entity<SummonableComponent> ent, ref GetItemActionsEvent args)
     {
-        if (!ent.Comp.CanSummon)
+        if (!ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
+            return;
+
+        if (ent.Comp.RequiresBibleUser && !HasComp<BibleUserComponent>(args.User))
             return;
 
         args.AddAction(ref ent.Comp.SummonActionEntity, ent.Comp.SummonActionPrototype);
+        Dirty(ent);
     }
 
+    [SubscribeLocalEvent]
     private void OnSummon(Entity<SummonableComponent> ent, ref SummonActionEvent args)
     {
         AttemptSummon(ent, args.Performer);
     }
 
+    [SubscribeLocalEvent]
     private void OnFamiliarDeath(Entity<FamiliarComponent> ent, ref MobStateChangedEvent args)
     {
         if (args.NewMobState != MobState.Dead)
@@ -191,10 +188,40 @@ public abstract partial class SharedBibleSystem : EntitySystem
         StartRespawnTimer(ent);
     }
 
+    [SubscribeLocalEvent]
+    private void OnFamiliarRemoved(Entity<FamiliarComponent> ent, ref ComponentRemove args)
+    {
+        if (!_net.IsServer)
+            return;
+
+        if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
+            return;
+
+        summonable.SummonedEntity = EntityUid.Invalid;
+        StartRespawnTimer(ent, summonable);
+    }
+
+    /// <summary>
+    /// When the familiar spawns, set its source to the bible.
+    /// </summary>
+    [SubscribeLocalEvent]
+    private void OnSpawned(Entity<FamiliarComponent> ent, ref GhostRoleSpawnerUsedEvent args)
+    {
+        var parent = Transform(args.Spawner).ParentUid;
+        if (!TryComp<SummonableComponent>(parent, out var summonable))
+            return;
+
+        ent.Comp.Source = parent;
+        Dirty(ent);
+
+        summonable.SummonedEntity = ent;
+        Dirty(parent, summonable);
+    }
+
     /// <summary>
     /// Starts up the respawn timer for the chaplain's familiar.
     /// </summary>
-    protected void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
+    private void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
     {
         if (!Resolve(ent.Comp.Source, ref summonable, false))
             return;
@@ -208,11 +235,8 @@ public abstract partial class SharedBibleSystem : EntitySystem
     /// <summary>
     /// Attempts to summon a new familiar.
     /// </summary>
-    private void AttemptSummon(Entity<SummonableComponent> ent, Entity<TransformComponent?> user)
+    private void AttemptSummon(Entity<SummonableComponent> ent, EntityUid user)
     {
-        if (!Resolve(user, ref user.Comp))
-            return;
-
         if (!ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
             return;
 
@@ -223,7 +247,7 @@ public abstract partial class SharedBibleSystem : EntitySystem
             return;
 
         // Make this familiar the component's summon
-        var familiar = PredictedSpawnAtPosition(ent.Comp.SummonEntityPrototype, user.Comp.Coordinates);
+        var familiar = PredictedSpawnAtPosition(ent.Comp.SummonEntityPrototype, Transform(user).Coordinates);
         ent.Comp.SummonedEntity = familiar;
 
         // If this is going to use a ghost role mob spawner, attach it to the bible.
@@ -239,7 +263,7 @@ public abstract partial class SharedBibleSystem : EntitySystem
             Dirty(familiar, familiarComponent);
         }
 
-        _actionsSystem.RemoveAction(user.Owner, ent.Comp.SummonActionEntity);
+        _actionsSystem.RemoveAction(user, ent.Comp.SummonActionEntity);
 
         ent.Comp.CanSummon = false;
         Dirty(ent);
