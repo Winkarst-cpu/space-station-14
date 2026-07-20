@@ -103,9 +103,6 @@ namespace Content.Client.Verbs.UI
             if (_playerManager.LocalEntity is not {Valid: true} user)
                 return;
 
-            if (!force && _combatMode.IsInCombatMode(user))
-                return;
-
             Close();
 
             var menu = popup ?? _context.RootMenu;
