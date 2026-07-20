@@ -14,6 +14,7 @@ using Content.Shared.Random.Helpers;
 using Content.Shared.Timing;
 using Content.Shared.Verbs;
 using Robust.Shared.Audio.Systems;
+using Robust.Shared.Containers;
 using Robust.Shared.Network;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
@@ -32,7 +33,9 @@ public sealed partial class BibleSystem : EntitySystem
     [Dependency] private INetManager _net = default!;
     [Dependency] private InventorySystem _inventory = default!;
     [Dependency] private MobStateSystem _mobState = default!;
+    [Dependency] private SharedActionsSystem _actions = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
+    [Dependency] private SharedContainerSystem _container = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private UseDelaySystem _delay = default!;
@@ -57,13 +60,18 @@ public sealed partial class BibleSystem : EntitySystem
             summonableComp.CanSummon = true;
             Dirty(uid, summonableComp);
 
+            // Re-add summon action.
+            if (summonableComp.SummonActionEntity is { } action
+                && _container.TryGetContainingContainer(uid, out var container))
+            {
+                _actions.GrantContainedAction(container.Owner, uid, action);
+            }
+
             if (_net.IsServer)
             {
                 _popup.PopupEntity(Loc.GetString(summonableComp.SummonRespawnReadyText, ("book", uid)), uid, PopupType.Medium);
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
             }
-
-
 
             RemCompDeferred(uid, respawningComponent);
         }
@@ -177,10 +185,10 @@ public sealed partial class BibleSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnFamiliarDeath(Entity<FamiliarComponent> ent, ref MobStateChangedEvent args)
     {
-        if (args.NewMobState != MobState.Dead)
+        if (args.NewMobState != MobState.Dead || ent.Comp.Source == null)
             return;
 
-        StartRespawnTimer(ent);
+        StartRespawnTimer(ent.Comp.Source.Value);
     }
 
     [SubscribeLocalEvent]
@@ -189,17 +197,19 @@ public sealed partial class BibleSystem : EntitySystem
         if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
             return;
 
-        StartRespawnTimer(ent, summonable);
+        summonable.SummonedEntity = null;
+        Dirty(ent.Comp.Source.Value, summonable);
+        StartRespawnTimer(ent.Comp.Source.Value);
     }
 
     [SubscribeLocalEvent]
     private void OnSummonableRemoved(Entity<SummonableComponent> ent, ref ComponentRemove args)
     {
-        if (!Exists(ent.Comp.SummonedEntity) || !TryComp<FamiliarComponent>(ent.Comp.SummonedEntity, out var comp))
+        if (!TryComp<FamiliarComponent>(ent.Comp.SummonedEntity, out var familiar))
             return;
 
-        comp.Source = null;
-        Dirty(ent.Comp.SummonedEntity.Value, comp);
+        familiar.Source = null;
+        Dirty(ent.Comp.SummonedEntity.Value, familiar);
     }
 
     /// <summary>
@@ -222,15 +232,15 @@ public sealed partial class BibleSystem : EntitySystem
     /// <summary>
     /// Starts up the respawn timer for the chaplain's familiar.
     /// </summary>
-    private void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
+    private void StartRespawnTimer(Entity<SummonableComponent?> ent)
     {
-        if (!Exists(ent.Comp.Source) || !Resolve(ent.Comp.Source.Value, ref summonable, false))
+        if (!Resolve(ent, ref ent.Comp, false))
             return;
 
-        AddComp<SummonableRespawningComponent>(ent.Comp.Source.Value);
+        EnsureComp<SummonableRespawningComponent>(ent);
 
-        summonable.RespawnTime = _timing.CurTime + summonable.RespawnCooldown;
-        Dirty(ent.Comp.Source.Value, summonable);
+        ent.Comp.RespawnTime = _timing.CurTime + ent.Comp.RespawnCooldown;
+        Dirty(ent);
     }
 
     /// <summary>
@@ -270,6 +280,8 @@ public sealed partial class BibleSystem : EntitySystem
             familiarComponent.Source = ent;
             Dirty(familiar, familiarComponent);
         }
+
+        _actions.RemoveAction(user, ent.Comp.SummonActionEntity);
 
         ent.Comp.CanSummon = false;
         Dirty(ent);
