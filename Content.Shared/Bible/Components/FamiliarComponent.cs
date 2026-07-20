@@ -8,7 +8,7 @@ namespace Content.Shared.Bible.Components;
 /// if any special behavior is needed.
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-[Access(typeof(SharedBibleSystem))]
+[Access(typeof(BibleSystem))]
 public sealed partial class FamiliarComponent : Component
 {
     /// <summary>

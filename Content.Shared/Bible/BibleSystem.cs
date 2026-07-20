@@ -22,21 +22,21 @@ using Robust.Shared.Timing;
 namespace Content.Shared.Bible;
 
 /// <summary>
-/// Logic for the Bible components.
+/// Handles bible healing on hit, and summoning/respawning of familiars via <see cref="SummonableComponent"/>.
 /// </summary>
-public sealed partial class SharedBibleSystem : EntitySystem
+public sealed partial class BibleSystem : EntitySystem
 {
     [Dependency] private ActionBlockerSystem _blocker = default!;
-    [Dependency] private DamageableSystem _damageableSystem = default!;
-    [Dependency] private InventorySystem _invSystem = default!;
-    [Dependency] private MobStateSystem _mobStateSystem = default!;
-    [Dependency] private SharedPopupSystem _popupSystem = default!;
-    [Dependency] private SharedActionsSystem _actionsSystem = default!;
-    [Dependency] private SharedAudioSystem _audio = default!;
-    [Dependency] private UseDelaySystem _delay = default!;
-    [Dependency] private SharedTransformSystem _transform = default!;
-    [Dependency] private INetManager _net = default!;
+    [Dependency] private DamageableSystem _damageable = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private INetManager _net = default!;
+    [Dependency] private InventorySystem _inventory = default!;
+    [Dependency] private MobStateSystem _mobState = default!;
+    [Dependency] private SharedActionsSystem _actions = default!;
+    [Dependency] private SharedAudioSystem _audio = default!;
+    [Dependency] private SharedPopupSystem _popup = default!;
+    [Dependency] private SharedTransformSystem _transform = default!;
+    [Dependency] private UseDelaySystem _delay = default!;
 
     /// <summary>
     /// This handles familiar respawning.
@@ -60,7 +60,7 @@ public sealed partial class SharedBibleSystem : EntitySystem
 
             if (_net.IsServer)
             {
-                _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+                _popup.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
             }
 
@@ -74,19 +74,19 @@ public sealed partial class SharedBibleSystem : EntitySystem
         if (!args.CanReach)
             return;
 
-        if (!TryComp(ent, out UseDelayComponent? useDelay) || _delay.IsDelayed((ent, useDelay)))
+        if (!TryComp<UseDelayComponent>(ent, out var useDelay) || _delay.IsDelayed((ent, useDelay)))
             return;
 
-        if (args.Target == null || args.Target == args.User || !_mobStateSystem.IsAlive(args.Target.Value))
+        if (args.Target == null || args.Target == args.User || !_mobState.IsAlive(args.Target.Value))
             return;
 
         // Sizzle user if they are not a Bible user.
         if (!HasComp<BibleUserComponent>(args.User))
         {
-            _popupSystem.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-sizzle"), args.User, args.User);
+            _popup.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-sizzle"), args.User, args.User);
 
             _audio.PlayPredicted(ent.Comp.SizzleSound, ent, args.User);
-            _damageableSystem.TryChangeDamage(args.User, ent.Comp.DamageOnUntrainedUse, true, origin: ent);
+            _damageable.TryChangeDamage(args.User, ent.Comp.DamageOnUntrainedUse, true, origin: ent);
             _delay.TryResetDelay((ent, useDelay));
 
             return;
@@ -96,19 +96,19 @@ public sealed partial class SharedBibleSystem : EntitySystem
         var targetEnt = Identity.Entity(args.Target.Value, EntityManager);
 
         // This only has a chance to fail if the target is not wearing anything on their head and is not a familiar.
-        if (!_invSystem.TryGetSlotEntity(args.Target.Value, "head", out _) && !HasComp<FamiliarComponent>(args.Target.Value))
+        if (!_inventory.TryGetSlotEntity(args.Target.Value, "head", out _) && !HasComp<FamiliarComponent>(args.Target.Value))
         {
             var rand = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(ent));
             if (rand.Prob(ent.Comp.FailChance))
             {
                 var othersFailMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-fail-others", ("user", userEnt), ("target", targetEnt), ("bible", ent));
-                _popupSystem.PopupEntity(othersFailMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.SmallCaution);
+                _popup.PopupEntity(othersFailMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.SmallCaution);
 
                 var selfFailMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-fail-self", ("target", targetEnt), ("bible", ent));
-                _popupSystem.PopupEntity(selfFailMessage, args.User, args.User, PopupType.MediumCaution);
+                _popup.PopupEntity(selfFailMessage, args.User, args.User, PopupType.MediumCaution);
 
                 _audio.PlayPredicted(ent.Comp.BibleHitSound, ent, args.User);
-                _damageableSystem.TryChangeDamage(args.Target.Value, ent.Comp.DamageOnFail, true, origin: ent);
+                _damageable.TryChangeDamage(args.Target.Value, ent.Comp.DamageOnFail, true, origin: ent);
                 _delay.TryResetDelay((ent, useDelay));
 
                 return;
@@ -118,7 +118,7 @@ public sealed partial class SharedBibleSystem : EntitySystem
         string othersMessage;
         string selfMessage;
 
-        if (_damageableSystem.TryChangeDamage(args.Target.Value, ent.Comp.Damage, true, origin: ent))
+        if (_damageable.TryChangeDamage(args.Target.Value, ent.Comp.Damage, true, origin: ent))
         {
             othersMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-others", ("user", userEnt), ("target", targetEnt), ("bible", ent));
             selfMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-self", ("target", targetEnt), ("bible", ent));
@@ -135,20 +135,17 @@ public sealed partial class SharedBibleSystem : EntitySystem
             selfMessage = Loc.GetString(ent.Comp.LocPrefix + "-heal-success-none-self", ("target", targetEnt), ("bible", ent));
         }
 
-        _popupSystem.PopupEntity(othersMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.Medium);
-        _popupSystem.PopupEntity(selfMessage, args.User, args.User, PopupType.Large);
+        _popup.PopupEntity(othersMessage, args.User, Filter.PvsExcept(args.User), true, PopupType.Medium);
+        _popup.PopupEntity(selfMessage, args.User, args.User, PopupType.Large);
     }
 
     [SubscribeLocalEvent]
     private void AddSummonVerb(Entity<SummonableComponent> ent, ref GetVerbsEvent<AlternativeVerb> args)
     {
-        if (!args.CanInteract || !args.CanAccess || !ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
+        if (!args.CanInteract || !args.CanAccess || !CanSummon(ent, args.User))
             return;
 
         var user = args.User;
-        if (ent.Comp.RequiresBibleUser && !HasComp<BibleUserComponent>(user))
-            return;
-
         AlternativeVerb verb = new()
         {
             Act = () =>
@@ -164,10 +161,7 @@ public sealed partial class SharedBibleSystem : EntitySystem
     [SubscribeLocalEvent]
     private void GetSummonAction(Entity<SummonableComponent> ent, ref GetItemActionsEvent args)
     {
-        if (!ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
-            return;
-
-        if (ent.Comp.RequiresBibleUser && !HasComp<BibleUserComponent>(args.User))
+        if (!CanSummon(ent, args.User))
             return;
 
         args.AddAction(ref ent.Comp.SummonActionEntity, ent.Comp.SummonActionPrototype);
@@ -191,13 +185,11 @@ public sealed partial class SharedBibleSystem : EntitySystem
     [SubscribeLocalEvent]
     private void OnFamiliarRemoved(Entity<FamiliarComponent> ent, ref ComponentRemove args)
     {
-        if (!_net.IsServer)
-            return;
-
         if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
             return;
 
         summonable.SummonedEntity = EntityUid.Invalid;
+        Dirty(ent.Comp.Source, summonable);
         StartRespawnTimer(ent, summonable);
     }
 
@@ -233,14 +225,21 @@ public sealed partial class SharedBibleSystem : EntitySystem
     }
 
     /// <summary>
+    /// Checks whether the summonable entity can be summoned by the given user.
+    /// </summary>
+    private bool CanSummon(Entity<SummonableComponent> ent, EntityUid user)
+    {
+        return ent.Comp.CanSummon
+            && ent.Comp.SummonEntityPrototype.HasValue
+            && (!ent.Comp.RequiresBibleUser || HasComp<BibleUserComponent>(user));
+    }
+
+    /// <summary>
     /// Attempts to summon a new familiar.
     /// </summary>
     private void AttemptSummon(Entity<SummonableComponent> ent, EntityUid user)
     {
-        if (!ent.Comp.CanSummon || !ent.Comp.SummonEntityPrototype.HasValue)
-            return;
-
-        if (ent.Comp.RequiresBibleUser && !HasComp<BibleUserComponent>(user))
+        if (!CanSummon(ent, user))
             return;
 
         if (!_blocker.CanInteract(user, ent))
@@ -253,7 +252,7 @@ public sealed partial class SharedBibleSystem : EntitySystem
         // If this is going to use a ghost role mob spawner, attach it to the bible.
         if (HasComp<GhostRoleMobSpawnerComponent>(familiar))
         {
-            _popupSystem.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-summon-requested"), user, user, PopupType.Medium);
+            _popup.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-summon-requested"), user, user, PopupType.Medium);
             _transform.SetParent(familiar, ent);
         }
         else
@@ -263,7 +262,7 @@ public sealed partial class SharedBibleSystem : EntitySystem
             Dirty(familiar, familiarComponent);
         }
 
-        _actionsSystem.RemoveAction(user, ent.Comp.SummonActionEntity);
+        _actions.RemoveAction(user, ent.Comp.SummonActionEntity);
 
         ent.Comp.CanSummon = false;
         Dirty(ent);

@@ -6,5 +6,5 @@ namespace Content.Shared.Bible.Components;
 /// EntityQuery tracking component for summonables that are waiting for a respawn.
 /// </summary>
 [RegisterComponent, NetworkedComponent]
-[Access(typeof(SharedBibleSystem))]
+[Access(typeof(BibleSystem))]
 public sealed partial class SummonableRespawningComponent : Component;

@@ -6,7 +6,7 @@ namespace Content.Shared.Bible.Components;
 /// Marks entity as bible user.
 /// </summary>
 [RegisterComponent, NetworkedComponent]
-[Access(typeof(SharedBibleSystem))]
+[Access(typeof(BibleSystem))]
 public sealed partial class BibleUserComponent : Component
 {
     public override bool SendOnlyToOwner => true;

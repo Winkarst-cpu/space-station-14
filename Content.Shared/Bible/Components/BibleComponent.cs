@@ -9,7 +9,7 @@ namespace Content.Shared.Bible.Components;
 /// Marks an entity as Bible that heals somebody on interaction.
 /// </summary>
 [RegisterComponent, NetworkedComponent]
-[Access(typeof(SharedBibleSystem))]
+[Access(typeof(BibleSystem))]
 public sealed partial class BibleComponent : Component
 {
     /// <summary>
