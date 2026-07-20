@@ -44,7 +44,7 @@ public sealed partial class SummonableComponent : Component
     /// <summary>
     /// The created summon action.
     /// </summary>
-    [ViewVariables, AutoNetworkedField]
+    [DataField]
     public EntityUid? SummonActionEntity;
 
     /// <summary>

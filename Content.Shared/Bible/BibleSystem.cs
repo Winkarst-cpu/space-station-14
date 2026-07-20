@@ -48,17 +48,17 @@ public abstract partial class SharedBibleSystem : EntitySystem
         SubscribeLocalEvent<FamiliarComponent, MobStateChangedEvent>(OnFamiliarDeath);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// This handles familiar respawning.
+    /// </summary>
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
 
         var query = EntityQueryEnumerator<SummonableRespawningComponent, SummonableComponent>();
-        var curTime = _timing.CurTime;
-
         while (query.MoveNext(out var uid, out var respawningComponent, out var summonableComp))
         {
-            if (summonableComp.RespawnTime > curTime)
+            if (summonableComp.RespawnTime > _timing.CurTime)
                 continue;
 
             // Delete old summoned entity.
@@ -71,11 +71,13 @@ public abstract partial class SharedBibleSystem : EntitySystem
             summonableComp.CanSummon = true;
             Dirty(uid, summonableComp);
 
-            _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+            if (_timing.IsFirstTimePredicted)
+            {
+                _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
+                _audio.PlayPvs(summonableComp.SummonSound, uid);
+            }
 
-            _audio.PlayPvs(summonableComp.SummonSound, uid);
-
-            RemCompDeferred(uid, respawningComponent);
+            RemComp(uid, respawningComponent);
         }
     }
 
@@ -176,7 +178,6 @@ public abstract partial class SharedBibleSystem : EntitySystem
             return;
 
         args.AddAction(ref ent.Comp.SummonActionEntity, ent.Comp.SummonActionPrototype);
-        Dirty(ent);
     }
 
     private void OnSummon(Entity<SummonableComponent> ent, ref SummonActionEvent args)
