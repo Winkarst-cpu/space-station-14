@@ -32,7 +32,6 @@ public sealed partial class BibleSystem : EntitySystem
     [Dependency] private INetManager _net = default!;
     [Dependency] private InventorySystem _inventory = default!;
     [Dependency] private MobStateSystem _mobState = default!;
-    [Dependency] private SharedActionsSystem _actions = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
@@ -63,6 +62,8 @@ public sealed partial class BibleSystem : EntitySystem
                 _popup.PopupEntity(Loc.GetString(summonableComp.SummonRespawnReadyText, ("book", uid)), uid, PopupType.Medium);
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
             }
+
+
 
             RemCompDeferred(uid, respawningComponent);
         }
@@ -191,6 +192,16 @@ public sealed partial class BibleSystem : EntitySystem
         StartRespawnTimer(ent, summonable);
     }
 
+    [SubscribeLocalEvent]
+    private void OnSummonableRemoved(Entity<SummonableComponent> ent, ref ComponentRemove args)
+    {
+        if (!Exists(ent.Comp.SummonedEntity) || !TryComp<FamiliarComponent>(ent.Comp.SummonedEntity, out var comp))
+            return;
+
+        comp.Source = null;
+        Dirty(ent.Comp.SummonedEntity.Value, comp);
+    }
+
     /// <summary>
     /// When the familiar spawns, set its source to the bible.
     /// </summary>
@@ -213,13 +224,13 @@ public sealed partial class BibleSystem : EntitySystem
     /// </summary>
     private void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
     {
-        if (!Exists(ent.Comp.Source) || !Resolve(ent.Comp.Source, ref summonable, false))
+        if (!Exists(ent.Comp.Source) || !Resolve(ent.Comp.Source.Value, ref summonable, false))
             return;
 
-        AddComp<SummonableRespawningComponent>(ent.Comp.Source);
+        AddComp<SummonableRespawningComponent>(ent.Comp.Source.Value);
 
         summonable.RespawnTime = _timing.CurTime + summonable.RespawnCooldown;
-        Dirty(ent.Comp.Source, summonable);
+        Dirty(ent.Comp.Source.Value, summonable);
     }
 
     /// <summary>
@@ -259,8 +270,6 @@ public sealed partial class BibleSystem : EntitySystem
             familiarComponent.Source = ent;
             Dirty(familiar, familiarComponent);
         }
-
-        _actions.RemoveAction(user, ent.Comp.SummonActionEntity);
 
         ent.Comp.CanSummon = false;
         Dirty(ent);

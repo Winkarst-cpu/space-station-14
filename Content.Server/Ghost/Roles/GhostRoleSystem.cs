@@ -781,7 +781,7 @@ public sealed partial class GhostRoleSystem : EntitySystem
         _transform.AttachToGridOrMap(mob);
 
         var spawnedEvent = new GhostRoleSpawnerUsedEvent(uid, mob);
-        RaiseLocalEvent(mob, spawnedEvent);
+        RaiseLocalEvent(mob, ref spawnedEvent);
 
         if (ghostRole.MakeSentient)
             _mindSystem.MakeSentient(mob, ghostRole.AllowMovement, ghostRole.AllowSpeech);
