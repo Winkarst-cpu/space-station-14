@@ -18,7 +18,11 @@ public sealed class BibleSystem : SharedBibleSystem
 
     private void OnFamiliarRemoved(Entity<FamiliarComponent> ent, ref ComponentRemove args)
     {
-        StartRespawnTimer(ent);
+        if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
+            return;
+
+        summonable.SummonedEntity = EntityUid.Invalid;
+        StartRespawnTimer(ent, summonable);
     }
 
     /// <summary>

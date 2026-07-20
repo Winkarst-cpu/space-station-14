@@ -194,9 +194,9 @@ public abstract partial class SharedBibleSystem : EntitySystem
     /// <summary>
     /// Starts up the respawn timer for the chaplain's familiar.
     /// </summary>
-    protected void StartRespawnTimer(Entity<FamiliarComponent> ent)
+    protected void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
     {
-        if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
+        if (!Resolve(ent.Comp.Source, ref summonable, false))
             return;
 
         AddComp<SummonableRespawningComponent>(ent.Comp.Source);
@@ -232,10 +232,12 @@ public abstract partial class SharedBibleSystem : EntitySystem
             _popupSystem.PopupEntity(Loc.GetString(ent.Comp.LocPrefix + "-summon-requested"), user, user, PopupType.Medium);
             _transform.SetParent(familiar, ent);
         }
-
-        EnsureComp<FamiliarComponent>(familiar, out var familiarComponent);
-        familiarComponent.Source = ent;
-        Dirty(familiar, familiarComponent);
+        else
+        {
+            EnsureComp<FamiliarComponent>(familiar, out var familiarComponent);
+            familiarComponent.Source = ent;
+            Dirty(familiar, familiarComponent);
+        }
 
         _actionsSystem.RemoveAction(user.Owner, ent.Comp.SummonActionEntity);
 
