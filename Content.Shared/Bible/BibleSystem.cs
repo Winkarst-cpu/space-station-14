@@ -189,7 +189,7 @@ public sealed partial class BibleSystem : EntitySystem
             return;
 
         summonable.SummonedEntity = EntityUid.Invalid;
-        Dirty(ent.Comp.Source.Value, summonable);
+        Dirty(ent.Comp.Source, summonable);
         StartRespawnTimer(ent, summonable);
     }
 
@@ -215,13 +215,13 @@ public sealed partial class BibleSystem : EntitySystem
     /// </summary>
     private void StartRespawnTimer(Entity<FamiliarComponent> ent, SummonableComponent? summonable = null)
     {
-        if (ent.Comp.Source == null || !Resolve(ent.Comp.Source.Value, ref summonable, false))
+        if (!Resolve(ent.Comp.Source, ref summonable, false))
             return;
 
-        AddComp<SummonableRespawningComponent>(ent.Comp.Source.Value);
+        AddComp<SummonableRespawningComponent>(ent.Comp.Source);
 
         summonable.RespawnTime = _timing.CurTime + summonable.RespawnCooldown;
-        Dirty(ent.Comp.Source.Value, summonable);
+        Dirty(ent.Comp.Source, summonable);
     }
 
     /// <summary>
