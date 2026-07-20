@@ -58,10 +58,11 @@ public sealed partial class SharedBibleSystem : EntitySystem
             summonableComp.CanSummon = true;
             Dirty(uid, summonableComp);
 
-            _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
-
             if (_net.IsServer)
+            {
+                _popupSystem.PopupEntity(Loc.GetString(summonableComp.LocPrefix + "-summon-respawn-ready", ("book", uid)), uid, PopupType.Medium);
                 _audio.PlayPvs(summonableComp.SummonSound, uid);
+            }
 
             RemCompDeferred(uid, respawningComponent);
         }
@@ -170,7 +171,6 @@ public sealed partial class SharedBibleSystem : EntitySystem
             return;
 
         args.AddAction(ref ent.Comp.SummonActionEntity, ent.Comp.SummonActionPrototype);
-        Dirty(ent);
     }
 
     [SubscribeLocalEvent]
