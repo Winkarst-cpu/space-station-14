@@ -7,4 +7,7 @@ namespace Content.Shared.Bible.Components;
 /// </summary>
 [RegisterComponent, NetworkedComponent]
 [Access(typeof(SharedBibleSystem))]
-public sealed partial class BibleUserComponent : Component;
+public sealed partial class BibleUserComponent : Component
+{
+    public override bool SendOnlyToOwner => true;
+}
