@@ -21,6 +21,21 @@ public sealed class PopupUIController : UIController, IOnStateEntered<GameplaySt
 
     private PopupRootControl? _popupControl;
 
+    private const float PopupOutlineSize = 1f;
+
+    private static readonly Vector2[] OutlineVectors = [
+        new (-PopupOutlineSize, 0),
+        new (PopupOutlineSize, 0),
+        new (0, -PopupOutlineSize),
+        new (0, PopupOutlineSize),
+
+        // Diagonals
+        new (-PopupOutlineSize, -PopupOutlineSize),
+        new (PopupOutlineSize, -PopupOutlineSize),
+        new (-PopupOutlineSize, PopupOutlineSize),
+        new (PopupOutlineSize, PopupOutlineSize),
+    ];
+
     public override void Initialize()
     {
         base.Initialize();
@@ -81,8 +96,14 @@ public sealed class PopupUIController : UIController, IOnStateEntered<GameplaySt
                 break;
         }
 
-        var dimensions = handle.GetDimensions(font, popup.Text, scale);
-        handle.DrawString(font, updatedPosition - dimensions / 2f, popup.Text, scale, color.WithAlpha(alpha));
+        var finalPosition = updatedPosition - handle.GetDimensions(font, popup.Text, scale) / 2f;
+        var outlineColor = Color.Black.WithAlpha(alpha);
+
+        // TODO: Make this a shader for better performance
+        foreach (var offset in OutlineVectors)
+            handle.DrawString(font, finalPosition + offset, popup.Text, scale, outlineColor);
+
+        handle.DrawString(font, finalPosition, popup.Text, scale, color.WithAlpha(alpha));
     }
 
     /// <summary>
