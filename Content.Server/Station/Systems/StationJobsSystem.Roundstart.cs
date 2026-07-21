@@ -298,10 +298,17 @@ public sealed partial class StationJobsSystem
 
             _random.Shuffle(givenStations);
 
+            var bannedRoles = _banManager.GetRoleBans(player);
             foreach (var station in givenStations)
             {
                 // Pick a random overflow job from that station
                 var overflows = GetOverflowJobs(station).ToList();
+
+                // Remove banned roles
+                if (bannedRoles != null)
+                    foreach (var ban in bannedRoles)
+                        overflows.Remove(ban.RoleId);
+
                 _random.Shuffle(overflows);
 
                 // Stations with no overflow slots should simply get skipped over.
