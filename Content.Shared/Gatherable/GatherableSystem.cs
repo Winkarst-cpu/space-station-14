@@ -77,15 +77,15 @@ public sealed partial class GatherableSystem : EntitySystem
         if (!Resolve(gathered, ref gathered.Comp))
             return;
 
+        var pos = Transform(gathered).Coordinates;
         if (TryComp<SoundOnGatherComponent>(gathered, out var soundComp))
-            _audio.PlayPredicted(soundComp.Sound, Transform(gathered).Coordinates, gatherer);
+            _audio.PlayPredicted(soundComp.Sound, pos, gatherer);
 
         _destructible.DestroyEntity(gathered);
 
         if (gathered.Comp.Loot == null)
             return;
 
-        var pos = Transform(gathered).Coordinates;
         foreach (var (tag, table) in gathered.Comp.Loot)
         {
             if (tag != "All" && gatherer != null && !_tagSystem.HasTag(gatherer.Value, tag))
