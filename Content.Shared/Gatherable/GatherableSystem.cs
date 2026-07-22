@@ -13,6 +13,10 @@ using Robust.Shared.Timing;
 
 namespace Content.Shared.Gatherable;
 
+/// <summary>
+/// System for handling collecting items from in-the-world structures,
+/// like gathering mushrooms or some rare herbs.
+/// </summary>
 public sealed partial class GatherableSystem : EntitySystem
 {
     [Dependency] private SharedAudioSystem _audio = default!;
