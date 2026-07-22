@@ -83,7 +83,7 @@ public sealed partial class GatherableSystem : EntitySystem
 
         _destructible.DestroyEntity(gathered);
 
-        if (gathered.Comp.Loot == null)
+        if (gathered.Comp.Loot is null)
             return;
 
         foreach (var (tag, table) in gathered.Comp.Loot)
