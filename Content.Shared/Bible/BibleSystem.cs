@@ -197,9 +197,11 @@ public sealed partial class BibleSystem : EntitySystem
         if (!TryComp<SummonableComponent>(ent.Comp.Source, out var summonable))
             return;
 
+        // If the entity is no longer a familiar, then there’s no need to keep track of it anymore
         summonable.SummonedEntity = null;
         Dirty(ent.Comp.Source.Value, summonable);
-        StartRespawnTimer(ent.Comp.Source.Value);
+
+        StartRespawnTimer((ent.Comp.Source.Value, summonable));
     }
 
     [SubscribeLocalEvent]
