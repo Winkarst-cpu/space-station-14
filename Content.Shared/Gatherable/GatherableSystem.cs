@@ -93,7 +93,9 @@ public sealed partial class GatherableSystem : EntitySystem
 
             var random = SharedRandomExtensions.PredictedRandom(_timing, GetNetEntity(gathered));
             foreach (var loot in _entityTable.GetSpawns(table, random))
+            {
                 PredictedSpawnAtPosition(loot, pos.Offset(random.NextVector2(gathered.Comp.GatherOffset)));
+            }
         }
     }
 }
