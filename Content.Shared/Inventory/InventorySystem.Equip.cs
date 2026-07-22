@@ -48,6 +48,21 @@ public abstract partial class InventorySystem
         SubscribeLocalEvent<InventoryComponent, BeingGibbedEvent>(OnBeingGibbed);
     }
 
+    [SubscribeLocalEvent]
+    private void OnTryInsert(Entity<InventoryComponent> ent, ref ContainerIsInsertingAttemptEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (!ent.Comp.Containers.Contains(args.Container))
+            return;
+
+        if (CanEquip(ent, args.EntityUid, args.Container.ID, out _, inventory: ent))
+            return;
+
+        args.Cancel();
+    }
+
     private void OnEntRemoved(EntityUid uid, InventoryComponent component, EntRemovedFromContainerMessage args)
     {
         if (!TryGetSlot(uid, args.Container.ID, out var slotDef, inventory: component))
