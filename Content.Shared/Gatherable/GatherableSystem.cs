@@ -15,13 +15,16 @@ namespace Content.Shared.Gatherable;
 
 public sealed partial class GatherableSystem : EntitySystem
 {
-    [Dependency] private SharedDestructibleSystem _destructible = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
-    [Dependency] private TagSystem _tagSystem = default!;
-    [Dependency] private EntityWhitelistSystem _whitelistSystem = default!;
+    [Dependency] private SharedDestructibleSystem _destructible = default!;
     [Dependency] private EntityTableSystem _entityTable = default!;
+    [Dependency] private TagSystem _tagSystem = default!;
     [Dependency] private IGameTiming _timing = default!;
+    [Dependency] private EntityWhitelistSystem _whitelistSystem = default!;
 
+    /// <summary>
+    /// If a gatherable entity is attacked with a tool that passes the tool entity whitelist (or if that whitelist doesn't exist), then it will be gathered.
+    /// </summary>
     [SubscribeLocalEvent]
     private void OnAttacked(Entity<GatherableComponent> gatherable, ref AttackedEvent args)
     {
@@ -31,6 +34,9 @@ public sealed partial class GatherableSystem : EntitySystem
         Gather(gatherable.AsNullable(), args.User);
     }
 
+    /// <summary>
+    /// If a gatherable entity is activated by a user that passes the tool entity whitelist (or if that whitelist doesn't exist), then it will be gathered.
+    /// </summary>
     [SubscribeLocalEvent]
     private void OnActivate(Entity<GatherableComponent> gatherable, ref ActivateInWorldEvent args)
     {
@@ -44,6 +50,10 @@ public sealed partial class GatherableSystem : EntitySystem
         args.Handled = true;
     }
 
+    /// <summary>
+    /// If a projectile hits a gatherable entity, it will gather that entity and decrease its own gathering amount.
+    /// If the projectile’s gathering amount is zero or less, it will be deleted.
+    /// </summary>
     [SubscribeLocalEvent]
     private void OnProjectileCollide(Entity<GatheringProjectileComponent> gathering, ref StartCollideEvent args)
     {
