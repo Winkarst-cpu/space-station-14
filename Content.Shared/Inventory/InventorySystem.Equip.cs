@@ -57,7 +57,7 @@ public abstract partial class InventorySystem
         if (!ent.Comp.Containers.Contains(args.Container))
             return;
 
-        if (CanEquip(ent, args.EntityUid, args.Container.ID, out _, inventory: ent))
+        if (CanFit(ent.AsNullable(), args.EntityUid, args.Container.ID))
             return;
 
         args.Cancel();
@@ -247,6 +247,61 @@ public abstract partial class InventorySystem
             HasComp<HandsComponent>(actor);
     }
 
+    /// <summary>
+    /// Checks whether an item can fit into an inventory slot.
+    /// </summary>
+    /// <param name="ent">The entity to check against.</param>
+    /// <param name="item">The item to check.</param>
+    /// <param name="slot">The slot to check.</param>
+    /// <param name="slotDefinition">The slot definition.</param>
+    /// <returns>Whether the item can fit into the slot.</returns>
+    public bool CanFit(Entity<InventoryComponent?> ent, Entity<ItemComponent?, ClothingComponent?> item, string slot, SlotDefinition? slotDefinition = null)
+    {
+        if (!Resolve(ent, ref ent.Comp, false))
+            return false;
+
+        if (slotDefinition == null && !TryGetSlot(ent, slot, out slotDefinition, inventory: ent.Comp))
+            return false;
+
+        if (slotDefinition.DependsOn != null)
+        {
+            if (!TryGetSlotEntity(ent, slotDefinition.DependsOn, out var slotEntity, ent.Comp))
+                return false;
+
+            if (slotDefinition.DependsOnComponents is { } componentRegistry)
+            {
+                foreach (var (_, entry) in componentRegistry)
+                {
+                    if (!HasComp(slotEntity, entry.Component.GetType()))
+                        return false;
+
+                    if (TryComp<AllowSuitStorageComponent>(slotEntity, out var comp) &&
+                        _whitelistSystem.IsWhitelistFailOrNull(comp.Whitelist, item))
+                        return false;
+                }
+            }
+        }
+
+        Resolve(item, ref item.Comp1, ref item.Comp2, false);
+
+        var fittingInPocket = slotDefinition.SlotFlags.HasFlag(SlotFlags.POCKET) &&
+            item.Comp1 != null &&
+            _item.GetSizePrototype(item.Comp1.Size) <= _item.GetSizePrototype(PocketableItemSize);
+
+        if (item.Comp2 == null && !fittingInPocket)
+            return false;
+        else if (item.Comp2 != null && !item.Comp2.Slots.HasFlag(slotDefinition.SlotFlags) && !fittingInPocket)
+            return false;
+
+        if (_whitelistSystem.IsWhitelistFail(slotDefinition.Whitelist, item))
+            return false;
+
+        if (_whitelistSystem.IsWhitelistPass(slotDefinition.Blacklist, item))
+            return false;
+
+        return true;
+    }
+
     public bool CanEquip(EntityUid uid, EntityUid itemUid, string slot, [NotNullWhen(false)] out string? reason,
         SlotDefinition? slotDefinition = null, InventoryComponent? inventory = null,
         ClothingComponent? clothing = null, ItemComponent? item = null) =>
@@ -265,30 +320,8 @@ public abstract partial class InventorySystem
             return false;
 
         DebugTools.Assert(slotDefinition.Name == slot);
-        if (slotDefinition.DependsOn != null)
-        {
-            if (!TryGetSlotEntity(target, slotDefinition.DependsOn, out EntityUid? slotEntity, inventory))
-                return false;
 
-            if (slotDefinition.DependsOnComponents is { } componentRegistry)
-            {
-                foreach (var (_, entry) in componentRegistry)
-                {
-                    if (!HasComp(slotEntity, entry.Component.GetType()))
-                        return false;
-
-                    if (TryComp<AllowSuitStorageComponent>(slotEntity, out var comp) &&
-                        _whitelistSystem.IsWhitelistFailOrNull(comp.Whitelist, itemUid))
-                        return false;
-                }
-            }
-        }
-
-        var fittingInPocket = slotDefinition.SlotFlags.HasFlag(SlotFlags.POCKET) &&
-                              item != null &&
-                              _item.GetSizePrototype(item.Size) <= _item.GetSizePrototype(PocketableItemSize);
-        if (clothing == null && !fittingInPocket
-            || clothing != null && !clothing.Slots.HasFlag(slotDefinition.SlotFlags) && !fittingInPocket)
+        if (!CanFit((target, inventory), (itemUid, item, clothing), slot, slotDefinition))
         {
             reason = "inventory-component-can-equip-does-not-fit";
             return false;
@@ -297,13 +330,6 @@ public abstract partial class InventorySystem
         if (!CanAccess(actor, target, itemUid))
         {
             reason = "interaction-system-user-interaction-cannot-reach";
-            return false;
-        }
-
-        if (_whitelistSystem.IsWhitelistFail(slotDefinition.Whitelist, itemUid) ||
-            _whitelistSystem.IsWhitelistPass(slotDefinition.Blacklist, itemUid))
-        {
-            reason = "inventory-component-can-equip-does-not-fit";
             return false;
         }
 
