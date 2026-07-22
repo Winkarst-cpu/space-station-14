@@ -288,9 +288,7 @@ public abstract partial class InventorySystem
             item.Comp1 != null &&
             _item.GetSizePrototype(item.Comp1.Size) <= _item.GetSizePrototype(PocketableItemSize);
 
-        if (item.Comp2 == null && !fittingInPocket)
-            return false;
-        else if (item.Comp2 != null && !item.Comp2.Slots.HasFlag(slotDefinition.SlotFlags) && !fittingInPocket)
+        if (!fittingInPocket && (item.Comp2 == null || !item.Comp2.Slots.HasFlag(slotDefinition.SlotFlags)))
             return false;
 
         if (_whitelistSystem.IsWhitelistFail(slotDefinition.Whitelist, item))
