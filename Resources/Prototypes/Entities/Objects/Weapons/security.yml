@@ -9,7 +9,7 @@
     layers:
     - state: stunbaton_off
       map: [ "enum.ToggleableVisuals.Layer" ]
-  - type: ItemToggleShowStatus
+  - type: ExaminableItemToggleStatus
     onText: comp-stunbaton-examined-on
     offText: comp-stunbaton-examined-off
   - type: ItemToggleRequiresCharge

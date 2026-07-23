@@ -621,7 +621,7 @@
           False: {state: knuckleduster_off}
   - type: ToggleClothing
     action: ActionToggleKnuckleDustersStun
-  - type: ItemToggleShowStatus
+  - type: ExaminableItemToggleStatus
     onText: comp-stunbaton-examined-on
     offText: comp-stunbaton-examined-off
   - type: ItemToggleRequiresCharge
