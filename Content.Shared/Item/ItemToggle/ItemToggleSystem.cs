@@ -408,7 +408,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnExamined(Entity<ItemToggleShowStatusComponent> ent, ref ExaminedEvent args)
+    private void OnExamined(Entity<ExaminableItemToggleStatusComponent> ent, ref ExaminedEvent args)
     {
         args.PushMarkup(IsActivated(ent.Owner) ? Loc.GetString(ent.Comp.OnText) : Loc.GetString(ent.Comp.OffText));
     }

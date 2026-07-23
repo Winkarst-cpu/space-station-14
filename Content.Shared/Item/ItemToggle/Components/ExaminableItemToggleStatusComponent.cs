@@ -7,7 +7,7 @@ namespace Content.Shared.Item.ItemToggle.Components;
 /// </summary>
 [RegisterComponent, NetworkedComponent]
 [Access(typeof(ItemToggleSystem))]
-public sealed partial class ItemToggleShowStatusComponent : Component
+public sealed partial class ExaminableItemToggleStatusComponent : Component
 {
     /// <summary>
     /// The text to show if the item is toggled on.
