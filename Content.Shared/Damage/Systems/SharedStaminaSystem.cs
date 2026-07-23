@@ -255,7 +255,7 @@ public abstract partial class SharedStaminaSystem : EntitySystem
     {
         // you can't inflict stamina damage on things with no stamina component
         // this prevents stun batons from using up charges when throwing it at lockers or lights
-        if (!HasComp<StaminaComponent>(target))
+        if (!TryComp<StaminaComponent>(target, out var stamina))
             return;
 
         var ev = new StaminaDamageOnHitAttemptEvent();
@@ -263,7 +263,15 @@ public abstract partial class SharedStaminaSystem : EntitySystem
         if (ev.Cancelled)
             return;
 
-        TakeStaminaDamage(target, component.Damage, source: uid, sound: component.Sound);
+        var toHit = new List<(EntityUid Entity, StaminaComponent Component)>()
+        {
+            (target, stamina)
+        };
+
+        var hitEvent = new StaminaMeleeHitEvent(toHit);
+        RaiseLocalEvent(uid, hitEvent);
+
+        TakeStaminaDamage(target, component.Damage, stamina, uid, sound: component.Sound);
     }
 
     private void UpdateStaminaVisuals(Entity<StaminaComponent> entity)
