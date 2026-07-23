@@ -34,11 +34,7 @@ public sealed partial class WaggingSystem : EntitySystem
         cloneComp.Suffix = ent.Comp.Suffix;
         AddComp(args.CloneUid, cloneComp, true);
 
-        DirtyFields(args.CloneUid, cloneComp, null,
-            nameof(WaggingComponent.Action),
-            nameof(WaggingComponent.Layer),
-            nameof(WaggingComponent.Organ),
-            nameof(WaggingComponent.Suffix));
+        Dirty(args.CloneUid, cloneComp);
     }
 
     /// <summary>
