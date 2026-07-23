@@ -291,10 +291,7 @@ public abstract partial class InventorySystem
         if (!fittingInPocket && (item.Comp2 == null || !item.Comp2.Slots.HasFlag(slotDefinition.SlotFlags)))
             return false;
 
-        if (_whitelistSystem.IsWhitelistFail(slotDefinition.Whitelist, item))
-            return false;
-
-        if (_whitelistSystem.IsWhitelistPass(slotDefinition.Blacklist, item))
+        if (!_whitelistSystem.CheckBoth(item, slotDefinition.Blacklist, slotDefinition.Whitelist))
             return false;
 
         return true;
