@@ -1,34 +1,26 @@
-﻿using Content.Server.Actions;
+﻿using Content.Shared.Actions;
 using Content.Shared.Body;
 using Content.Shared.Cloning.Events;
 using Content.Shared.Humanoid.Markings;
 using Content.Shared.Mobs;
 using Content.Shared.Toggleable;
-using Content.Shared.Wagging;
-using Robust.Shared.Prototypes;
+using JetBrains.Annotations;
 using Robust.Shared.Utility;
 
-namespace Content.Server.Wagging;
+namespace Content.Shared.Wagging;
 
 /// <summary>
-/// Adds an action to toggle wagging animation for tails markings that supporting this
+/// Adds an action to toggle the wagging animation for tails markings that support it.
 /// </summary>
 public sealed partial class WaggingSystem : EntitySystem
 {
-    [Dependency] private ActionsSystem _actions = default!;
+    [Dependency] private SharedActionsSystem _actions = default!;
     [Dependency] private SharedVisualBodySystem _visualBody = default!;
 
-    public override void Initialize()
-    {
-        base.Initialize();
-
-        SubscribeLocalEvent<WaggingComponent, MapInitEvent>(OnWaggingMapInit);
-        SubscribeLocalEvent<WaggingComponent, ComponentShutdown>(OnWaggingShutdown);
-        SubscribeLocalEvent<WaggingComponent, ToggleActionEvent>(OnWaggingToggle);
-        SubscribeLocalEvent<WaggingComponent, MobStateChangedEvent>(OnMobStateChanged);
-        SubscribeLocalEvent<WaggingComponent, CloningEvent>(OnCloning);
-    }
-
+    /// <summary>
+    /// Copies the component and its values to the clone.
+    /// </summary>
+    [SubscribeLocalEvent]
     private void OnCloning(Entity<WaggingComponent> ent, ref CloningEvent args)
     {
         if (!args.Settings.EventComponents.Contains(Factory.GetRegistration(ent.Comp.GetType()).Name))
@@ -41,35 +33,70 @@ public sealed partial class WaggingSystem : EntitySystem
         cloneComp.Organ = ent.Comp.Organ;
         cloneComp.Suffix = ent.Comp.Suffix;
         AddComp(args.CloneUid, cloneComp, true);
+
+        DirtyFields(args.CloneUid, cloneComp, null,
+            nameof(WaggingComponent.Action),
+            nameof(WaggingComponent.Layer),
+            nameof(WaggingComponent.Organ),
+            nameof(WaggingComponent.Suffix));
     }
 
+    /// <summary>
+    /// Adds the wagging action during initialization.
+    /// </summary>
+    [SubscribeLocalEvent]
     private void OnWaggingMapInit(Entity<WaggingComponent> ent, ref MapInitEvent args)
     {
         _actions.AddAction(ent, ref ent.Comp.ActionEntity, ent.Comp.Action, ent);
+        DirtyField(ent.AsNullable(), nameof(WaggingComponent.ActionEntity));
     }
 
+    /// <summary>
+    /// Removes the wagging action during shutdown.
+    /// </summary>
+    [SubscribeLocalEvent]
     private void OnWaggingShutdown(Entity<WaggingComponent> ent, ref ComponentShutdown args)
     {
         _actions.RemoveAction(ent.Owner, ent.Comp.ActionEntity);
     }
 
+    /// <summary>
+    /// Attempts to toggle the wagging action.
+    /// </summary>
+    [SubscribeLocalEvent]
     private void OnWaggingToggle(Entity<WaggingComponent> ent, ref ToggleActionEvent args)
     {
         if (args.Handled)
             return;
 
-        TryToggleWagging(ent.AsNullable());
+        if (!TryToggleWagging(ent.AsNullable()))
+            return;
+
+        args.Handled = true;
     }
 
+    /// <summary>
+    /// Tries to disable wagging when the mob state changes.
+    /// </summary>
+    [SubscribeLocalEvent]
     private void OnMobStateChanged(Entity<WaggingComponent> ent, ref MobStateChangedEvent args)
     {
-        if (ent.Comp.Wagging)
-            TryToggleWagging(ent.AsNullable());
+        TryToggleWagging(ent.AsNullable(), false);
     }
 
-    private bool TryToggleWagging(Entity<WaggingComponent?> ent)
+    /// <summary>
+    /// Toggles wagging.
+    /// </summary>
+    /// <param name="ent">The entity to toggle.</param>
+    /// <param name="desired">The desired wagging state.</param>
+    /// <returns>Whether wagging was toggled.</returns>
+    [PublicAPI]
+    public bool TryToggleWagging(Entity<WaggingComponent?> ent, bool? desired = null)
     {
         if (!Resolve(ent, ref ent.Comp))
+            return false;
+
+        if (desired == ent.Comp.Wagging)
             return false;
 
         if (!_visualBody.TryGatherMarkingsData(ent.Owner,
@@ -85,14 +112,15 @@ public sealed partial class WaggingSystem : EntitySystem
             return false;
 
         ent.Comp.Wagging = !ent.Comp.Wagging;
+        DirtyField(ent, nameof(WaggingComponent.Wagging));
 
         markingsSet = markingsSet.ShallowClone();
-        foreach (var (layers, markings) in markingsSet)
+        foreach (var (layers, _) in markingsSet)
         {
             markingsSet[layers] = markingsSet[layers].ShallowClone();
             var layerMarkings = markingsSet[layers];
 
-            for (int i = 0; i < layerMarkings.Count; i++)
+            for (var i = 0; i < layerMarkings.Count; i++)
             {
                 var currentMarkingId = layerMarkings[i].MarkingId;
                 string newMarkingId;
@@ -128,6 +156,7 @@ public sealed partial class WaggingSystem : EntitySystem
         {
             [ent.Comp.Organ] = markingsSet
         });
+
         return true;
     }
 }
