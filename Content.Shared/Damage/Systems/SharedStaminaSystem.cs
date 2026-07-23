@@ -8,8 +8,10 @@ using Content.Shared.Damage.Events;
 using Content.Shared.Database;
 using Content.Shared.Effects;
 using Content.Shared.FixedPoint;
+using Content.Shared.Item.ItemToggle;
 using Content.Shared.Movement.Components;
 using Content.Shared.Movement.Systems;
+using Content.Shared.Power.EntitySystems;
 using Content.Shared.Projectiles;
 using Content.Shared.Rejuvenate;
 using Content.Shared.Rounding;
@@ -38,11 +40,13 @@ public abstract partial class SharedStaminaSystem : EntitySystem
     [Dependency] private INetManager _net = default!;
     [Dependency] private ISharedAdminLogManager _adminLogger = default!;
     [Dependency] private AlertsSystem _alerts = default!;
+    [Dependency] private SharedBatterySystem _battery = default!;
     [Dependency] private MetaDataSystem _metadata = default!;
     [Dependency] private MovementModStatusSystem _movementMod = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedColorFlashEffectSystem _color = default!;
     [Dependency] private StatusEffectsSystem _status = default!;
+    [Dependency] private ItemToggleSystem _itemToggle = default!;
     [Dependency] protected SharedStunSystem StunSystem = default!;
 
     [Dependency] private EntityQuery<StaminaComponent> _stamQuery = default!;
@@ -209,6 +213,36 @@ public abstract partial class SharedStaminaSystem : EntitySystem
     private void OnThrowHit(EntityUid uid, StaminaDamageOnCollideComponent component, ThrowDoHitEvent args)
     {
         OnCollide(uid, component, args.Target);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnHitTakeCharge(Entity<StaminaDamageOnHitRequiresChargeComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (_battery.TryUseCharge(ent.Owner, ent.Comp.RequiredCharge))
+            return;
+
+        args.Cancelled = true;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnHitCheckToggle(Entity<StaminaDamageOnHitRequiresToggleComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (_itemToggle.IsActivated(ent.Owner))
+            return;
+
+        args.Cancelled = true;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnGetPowerCost(Entity<StaminaDamageOnHitRequiresChargeComponent> ent, ref GetHitPowerCostEvent args)
+    {
+        args.Cost += ent.Comp.RequiredCharge;
     }
 
     private void OnCollide(EntityUid uid, StaminaDamageOnCollideComponent component, EntityUid target)

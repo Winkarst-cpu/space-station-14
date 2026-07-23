@@ -1,8 +1,11 @@
 using Content.Shared.ActionBlocker;
+using Content.Shared.Examine;
 using Content.Shared.Interaction;
 using Content.Shared.Interaction.Events;
 using Content.Shared.Item.ItemToggle.Components;
 using Content.Shared.Popups;
+using Content.Shared.Power;
+using Content.Shared.Power.EntitySystems;
 using Content.Shared.Temperature;
 using Content.Shared.Toggleable;
 using Content.Shared.Trigger.Components.Effects;
@@ -24,6 +27,7 @@ public sealed partial class ItemToggleSystem : EntitySystem
     [Dependency] private INetManager _netManager = default!;
     [Dependency] private SharedAppearanceSystem _appearance = default!;
     [Dependency] private SharedAudioSystem _audio = default!;
+    [Dependency] private SharedBatterySystem _battery = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private ActionBlockerSystem _actionBlocker = default!;
     [Dependency] private IGameTiming _gameTiming = default!;
@@ -376,8 +380,36 @@ public sealed partial class ItemToggleSystem : EntitySystem
             var stream = args.Predicted
                 ? _audio.PlayPredicted(comp.ActiveSound, uid, args.User, loop)
                 : _audio.PlayPvs(comp.ActiveSound, uid, loop);
-            if (stream?.Entity is {} entity)
+            if (stream?.Entity is { } entity)
                 comp.PlayingStream = entity;
         }
+    }
+
+    [SubscribeLocalEvent]
+    private void OnToggleCheckCharge(Entity<ItemToggleRequiresChargeComponent> ent, ref ItemToggleActivateAttemptEvent args)
+    {
+        if (args.Cancelled)
+            return;
+
+        if (_battery.GetCharge(ent.Owner) >= ent.Comp.RequiredCharge)
+            return;
+
+        args.Popup = Loc.GetString(ent.Comp.FailPopup);
+        args.Cancelled = true;
+    }
+
+    [SubscribeLocalEvent]
+    private void OnChargeChanged(Entity<ItemToggleRequiresChargeComponent> ent, ref ChargeChangedEvent args)
+    {
+        if (_battery.GetCharge(ent.Owner) >= ent.Comp.RequiredCharge)
+            return;
+
+        TryDeactivate(ent.Owner);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnExamined(Entity<ItemToggleShowStatusComponent> ent, ref ExaminedEvent args)
+    {
+        args.PushMarkup(IsActivated(ent.Owner) ? Loc.GetString(ent.Comp.OnText) : Loc.GetString(ent.Comp.OffText));
     }
 }

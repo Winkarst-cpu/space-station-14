@@ -9,8 +9,12 @@
     layers:
     - state: stunbaton_off
       map: [ "enum.ToggleableVisuals.Layer" ]
-  - type: Stunbaton
-    energyPerUse: 50
+  - type: ItemToggleShowStatus
+    onText: comp-stunbaton-examined-on
+    offText: comp-stunbaton-examined-off
+  - type: ItemToggleRequiresCharge
+    requiredCharge: 50
+    failPopup: stunbaton-component-low-charge
   - type: ItemToggle
     onActivate: false
     soundActivate:
@@ -40,6 +44,10 @@
     bluntStaminaDamageFactor: 2.0
     angle: 60
     animation: WeaponArcThrust
+  - type: ExaminableBatteryHitsLeft
+  - type: StaminaDamageOnHitRequiresToggle
+  - type: StaminaDamageOnHitRequiresCharge
+    requiredCharge: 50
   - type: StaminaDamageOnHit
     damage: 35
     sound: /Audio/Weapons/egloves.ogg
@@ -90,6 +98,9 @@
     guides:
     - Security
     - Antagonists
+  - type: Tag
+    tags:
+    - Stunbaton
 
 - type: entity
   name: truncheon

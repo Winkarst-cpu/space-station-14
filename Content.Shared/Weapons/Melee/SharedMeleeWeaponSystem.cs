@@ -30,6 +30,7 @@ using Content.Shared.Weapons.Melee.Events;
 using Content.Shared.Weapons.Ranged.Components;
 using Content.Shared.Weapons.Ranged.Events;
 using Content.Shared.Weapons.Ranged.Systems;
+using JetBrains.Annotations;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Map;
@@ -338,6 +339,19 @@ public abstract partial class SharedMeleeWeaponSystem : EntitySystem
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Returns how much battery power it costs to hit with this weapon.
+    /// </summary>
+    /// <param name="uid">The entity to check.</param>
+    [PublicAPI]
+    public float GetHitPowerCost(EntityUid uid)
+    {
+        var ev = new GetHitPowerCostEvent();
+        RaiseLocalEvent(uid, ref ev);
+
+        return ev.Cost;
     }
 
     public void AttemptLightAttackMiss(EntityUid user, EntityUid weaponUid, MeleeWeaponComponent weapon, EntityCoordinates coordinates)
