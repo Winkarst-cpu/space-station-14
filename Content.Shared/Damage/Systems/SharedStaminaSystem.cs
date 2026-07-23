@@ -216,19 +216,25 @@ public abstract partial class SharedStaminaSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnHitTakeCharge(Entity<StaminaDamageOnHitRequiresChargeComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
+    private void OnHitTakeCharge(Entity<StaminaDamageOnHitRequiresChargeComponent> ent, ref StaminaMeleeHitEvent args)
+    {
+        _battery.TryUseCharge(ent.Owner, ent.Comp.RequiredCharge);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnHitAttemptCheckCharge(Entity<StaminaDamageOnHitRequiresChargeComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
     {
         if (args.Cancelled)
             return;
 
-        if (_battery.TryUseCharge(ent.Owner, ent.Comp.RequiredCharge))
+        if (_battery.GetCharge(ent.Owner) >= ent.Comp.RequiredCharge)
             return;
 
         args.Cancelled = true;
     }
 
     [SubscribeLocalEvent]
-    private void OnHitCheckToggle(Entity<StaminaDamageOnHitRequiresToggleComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
+    private void OnHitCAttemptheckToggle(Entity<StaminaDamageOnHitRequiresToggleComponent> ent, ref StaminaDamageOnHitAttemptEvent args)
     {
         if (args.Cancelled)
             return;
