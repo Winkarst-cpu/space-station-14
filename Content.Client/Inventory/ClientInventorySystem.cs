@@ -149,6 +149,44 @@ namespace Content.Client.Inventory
                 EntitySlotUpdate?.Invoke(newData);
         }
 
+        /// <summary>
+        /// Adds a new slot blocker to the slot.
+        /// </summary>
+        /// <param name="ent">The entity containing the slot.</param>
+        /// <param name="slotName">The name of the slot.</param>
+        /// <param name="blocker">The blocker to add.</param>
+        [PublicAPI]
+        public void AddSlotBlocker(Entity<InventorySlotsComponent?> ent, string slotName, EntityUid blocker)
+        {
+            if (!Resolve(ent, ref ent.Comp, false))
+                return;
+
+            var data = ent.Comp.SlotData[slotName];
+            data.Blockers.Add(blocker);
+
+            if (ent.Owner == _playerManager.LocalEntity)
+                EntitySlotUpdate?.Invoke(data);
+        }
+
+        /// <summary>
+        /// Removes a slot blocker from the slot.
+        /// </summary>
+        /// <param name="ent">The entity containing the slot.</param>
+        /// <param name="slotName">The name of the slot.</param>
+        /// <param name="blocker">The blocker to remove.</param>
+        [PublicAPI]
+        public void RemoveSlotBlocker(Entity<InventorySlotsComponent?> ent, string slotName, EntityUid blocker)
+        {
+            if (!Resolve(ent, ref ent.Comp, false))
+                return;
+
+            var data = ent.Comp.SlotData[slotName];
+            data.Blockers.Remove(blocker);
+
+            if (ent.Owner == _playerManager.LocalEntity)
+                EntitySlotUpdate?.Invoke(data);
+        }
+
         public void UpdateSlot(EntityUid owner, InventorySlotsComponent component, string slotName,
             bool? blocked = null, bool? highlight = null)
         {
@@ -293,6 +331,7 @@ namespace Content.Client.Inventory
             [ViewVariables] public bool Blocked;
             [ViewVariables] public bool Highlighted;
             [ViewVariables] public ContainerSlot? Container;
+            [ViewVariables] public List<EntityUid> Blockers = [];
             [ViewVariables] public bool HasSlotGroup => SlotDef.SlotGroup != "Default";
             [ViewVariables] public Vector2i ButtonOffset => SlotDef.UIWindowPosition;
             [ViewVariables] public string SlotName => SlotDef.Name;
@@ -317,6 +356,7 @@ namespace Content.Client.Inventory
                 Highlighted = highlighted;
                 Container = oldData.Container;
                 Blocked = blocked;
+                Blockers = oldData.Blockers;
             }
 
             public static implicit operator SlotData(SlotDefinition s)

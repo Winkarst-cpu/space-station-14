@@ -5,31 +5,31 @@ namespace Content.Shared.Inventory;
 /// <summary>
 /// Handles prevention of items being unequipped and equipped from slots that are blocked by <see cref="SlotBlockComponent"/>.
 /// </summary>
-public sealed partial class SlotBlockSystem : EntitySystem
+public abstract partial class SlotBlockSystem : EntitySystem
 {
-    public override void Initialize()
+    [SubscribeLocalEvent]
+    private static void OnEquipAttempt(Entity<SlotBlockComponent> ent, ref InventoryRelayedEvent<IsEquippingTargetAttemptEvent> args)
     {
-        base.Initialize();
-
-        SubscribeLocalEvent<SlotBlockComponent, InventoryRelayedEvent<IsEquippingTargetAttemptEvent>>(OnEquipAttempt);
-        SubscribeLocalEvent<SlotBlockComponent, InventoryRelayedEvent<IsUnequippingTargetAttemptEvent>>(OnUnequipAttempt);
-    }
-
-    private void OnEquipAttempt(Entity<SlotBlockComponent> ent, ref InventoryRelayedEvent<IsEquippingTargetAttemptEvent> args)
-    {
-        if (args.Args.Cancelled || (args.Args.SlotFlags & ent.Comp.Slots) == 0)
+        if (args.Args.Cancelled)
             return;
 
-        args.Args.Reason = Loc.GetString("slot-block-component-blocked", ("item", ent));
+        if ((args.Args.SlotFlags & ent.Comp.Slots) == 0)
+            return;
+
+        args.Args.Reason = "slot-block-component-blocked";
         args.Args.Cancel();
     }
 
-    private void OnUnequipAttempt(Entity<SlotBlockComponent> ent, ref InventoryRelayedEvent<IsUnequippingTargetAttemptEvent> args)
+    [SubscribeLocalEvent]
+    private static void OnUnequipAttempt(Entity<SlotBlockComponent> ent, ref InventoryRelayedEvent<IsUnequippingTargetAttemptEvent> args)
     {
-        if (args.Args.Cancelled || (args.Args.SlotFlags & ent.Comp.Slots) == 0)
+        if (args.Args.Cancelled)
             return;
 
-        args.Args.Reason = Loc.GetString("slot-block-component-blocked", ("item", ent));
+        if ((args.Args.SlotFlags & ent.Comp.Slots) == 0)
+            return;
+
+        args.Args.Reason = "slot-block-component-blocked";
         args.Args.Cancel();
     }
 }

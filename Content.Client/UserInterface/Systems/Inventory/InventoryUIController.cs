@@ -97,6 +97,8 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         button.Pressed += ItemPressed;
         button.StoragePressed += StoragePressed;
         button.Hover += SlotButtonHovered;
+        button.Blocked = data.Blockers.Count > 0 || data.Blocked;
+        button.UpdateBlockers(data.Blockers);
 
         return button;
     }
@@ -258,6 +260,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         _inventorySystem.OnSlotRemoved += RemoveSlot;
         _inventorySystem.OnLinkInventorySlots += LoadSlots;
         _inventorySystem.OnUnlinkInventory += UnloadSlots;
+        _inventorySystem.EntitySlotUpdate += EntitySlotUpdate;
         _inventorySystem.OnSpriteUpdate += SpriteUpdated;
     }
 
@@ -268,6 +271,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         _inventorySystem.OnSlotRemoved -= RemoveSlot;
         _inventorySystem.OnLinkInventorySlots -= LoadSlots;
         _inventorySystem.OnUnlinkInventory -= UnloadSlots;
+        _inventorySystem.EntitySlotUpdate -= EntitySlotUpdate;
         _inventorySystem.OnSpriteUpdate -= SpriteUpdated;
     }
 
@@ -425,6 +429,25 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         UpdateInventoryHotbar(null);
     }
 
+    private void EntitySlotUpdate(SlotData data)
+    {
+        var blocked = _entities.HasComponent<VirtualItemComponent>(data.Container?.ContainedEntity) || data.Blockers.Count > 0 || data.Blocked;
+
+        if (_strippingWindow?.InventoryButtons.GetButton(data.SlotName) is { } inventoryButton)
+        {
+            inventoryButton.Highlight = data.Highlighted;
+            inventoryButton.Blocked = blocked;
+            inventoryButton.UpdateBlockers(data.Blockers);
+        }
+
+        if (_slotGroups.GetValueOrDefault(data.SlotGroup)?.GetButton(data.SlotName) is { } button)
+        {
+            button.Highlight = data.Highlighted;
+            button.Blocked = blocked;
+            button.UpdateBlockers(data.Blockers);
+        }
+    }
+
     private void SpriteUpdated(SlotSpriteUpdate update)
     {
         var (entity, group, name, showStorage) = update;
@@ -441,12 +464,10 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         if (_entities.TryGetComponent(entity, out VirtualItemComponent? virtb))
         {
             button.SetEntity(virtb.BlockingEntity);
-            button.Blocked = true;
         }
         else
         {
             button.SetEntity(entity);
-            button.Blocked = false;
             button.StorageButton.Visible = showStorage;
         }
     }
