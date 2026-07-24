@@ -123,6 +123,26 @@ namespace Content.Client.Inventory
             _clothingVisualsSystem.InitClothing(ent.Owner, ent.Comp);
         }
 
+        [SubscribeLocalEvent]
+        private void OnEquippedSlotBlocker(Entity<InventorySlotBlockComponent> ent, ref GotEquippedEvent args)
+        {
+            var enumerator = GetSlotEnumerator(args.EquipTarget, ent.Comp.Slots);
+            while (enumerator.MoveNext(out var container))
+            {
+                AddSlotBlocker(args.EquipTarget, container.ID, ent);
+            }
+        }
+
+        [SubscribeLocalEvent]
+        private void OnUnequippedSlotBlocker(Entity<InventorySlotBlockComponent> ent, ref GotUnequippedEvent args)
+        {
+            var enumerator = GetSlotEnumerator(args.EquipTarget, ent.Comp.Slots);
+            while (enumerator.MoveNext(out var container))
+            {
+                RemoveSlotBlocker(args.EquipTarget, container.ID, ent);
+            }
+        }
+
         public override void Shutdown()
         {
             CommandBinds.Unregister<ClientInventorySystem>();
