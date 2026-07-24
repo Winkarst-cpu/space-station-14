@@ -33,8 +33,6 @@ public sealed partial class WaggingSystem : EntitySystem
         cloneComp.Organ = ent.Comp.Organ;
         cloneComp.Suffix = ent.Comp.Suffix;
         AddComp(args.CloneUid, cloneComp, true);
-
-        Dirty(args.CloneUid, cloneComp);
     }
 
     /// <summary>
