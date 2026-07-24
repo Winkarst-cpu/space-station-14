@@ -981,8 +981,6 @@
     sprite: Clothing/Uniforms/Jumpsuit/ert_engineer.rsi
   - type: Clothing
     sprite: Clothing/Uniforms/Jumpsuit/ert_engineer.rsi
-  - type: InventorySlotBlock
-    slots: [feet]
 
 - type: entity
   parent: [ BaseCentcommContraband, ClothingUniformBase ]
