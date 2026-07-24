@@ -1,4 +1,4 @@
-﻿using Content.Shared.Actions;
+using Content.Shared.Actions;
 using Content.Shared.Body;
 using Content.Shared.Cloning.Events;
 using Content.Shared.Humanoid.Markings;
@@ -81,7 +81,7 @@ public sealed partial class WaggingSystem : EntitySystem
     }
 
     /// <summary>
-    /// Toggles wagging.
+    /// If <see cref="desired"/> provided - attempts to set wagging to it, otherwise tries to toggle wagging.
     /// </summary>
     /// <param name="ent">The entity to toggle.</param>
     /// <param name="desired">The desired wagging state.</param>
