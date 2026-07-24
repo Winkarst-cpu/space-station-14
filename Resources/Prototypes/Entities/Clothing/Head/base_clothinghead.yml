@@ -107,7 +107,7 @@
   id: ClothingHeadEVAHelmetBase
   name: base space helmet
   components:
-  - type: SlotBlock
+  - type: InventorySlotBlock
     slots: [ears, eyes, mask]
   - type: BreathMask
   - type: Item
@@ -145,7 +145,7 @@
   name: base hardsuit helmet
   categories: [ HideSpawnMenu ]
   components:
-  - type: SlotBlock
+  - type: InventorySlotBlock
     slots: [ears, eyes, mask]
   - type: BreathMask
   - type: Sprite
@@ -194,7 +194,7 @@
   name: base hardsuit helmet with light
   categories: [ HideSpawnMenu ]
   components:
-  - type: SlotBlock
+  - type: InventorySlotBlock
     slots: [ears, eyes, mask]
   - type: Sprite
     layers:
