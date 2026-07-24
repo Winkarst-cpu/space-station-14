@@ -114,6 +114,21 @@ namespace Content.Client.Inventory
         private void OnPlayerAttached(EntityUid uid, InventorySlotsComponent component, LocalPlayerAttachedEvent args)
         {
             OnLinkInventorySlots?.Invoke(uid, component);
+
+            // TODO: Refactor clientside inventories. I hate how messy they are and that SlotData is not networked
+            // This code updates all slot blockers because of that
+            var enumerator = GetSlotEnumerator(uid);
+            while (enumerator.NextItem(out var item))
+            {
+                if (!TryComp<InventorySlotBlockComponent>(item, out var comp))
+                    continue;
+
+                var blockedSlots = GetSlotEnumerator(uid, comp.Slots);
+                while (blockedSlots.MoveNext(out var container))
+                {
+                    AddSlotBlocker(uid, container.ID, item);
+                }
+            }
         }
 
         protected override void OnInit(Entity<InventoryComponent> ent, ref ComponentInit args)

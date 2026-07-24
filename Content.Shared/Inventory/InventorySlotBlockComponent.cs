@@ -13,5 +13,5 @@ public sealed partial class InventorySlotBlockComponent : Component
     /// Slots that this entity should block.
     /// </summary>
     [DataField(required: true)]
-    public SlotFlags Slots;
+    public SlotFlags Slots = SlotFlags.NONE;
 }

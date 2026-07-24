@@ -210,6 +210,7 @@ namespace Content.Client.UserInterface.Controls
                 SetSize = new Vector2(DefaultButtonSize * 0.35F, DefaultButtonSize),
                 HorizontalAlignment = HAlignment.Right,
                 VerticalAlignment = VAlignment.Center,
+                Orientation = BoxContainer.LayoutOrientation.Vertical,
             });
 
             HighlightTexturePath = "slot_highlight";
@@ -290,6 +291,7 @@ namespace Content.Client.UserInterface.Controls
                     {
                         SetSize = new Vector2(DefaultButtonSize * 0.35f),
                         VerticalAlignment = VAlignment.Top,
+                        OverrideDirection = Direction.South,
                     };
 
                     BlockersContainer.AddChild(blockerView);
