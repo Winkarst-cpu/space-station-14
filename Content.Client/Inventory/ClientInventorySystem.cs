@@ -379,6 +379,15 @@ namespace Content.Client.Inventory
                 Blockers = oldData.Blockers;
             }
 
+            /// <summary>
+            /// Returns whether this slot is blocked.
+            /// </summary>
+            /// <returns>Whether this slot is blocked.</returns>
+            public bool IsBlocked()
+            {
+                return Blockers.Count > 0 || Blocked;
+            }
+
             public static implicit operator SlotData(SlotDefinition s)
             {
                 return new SlotData(s);

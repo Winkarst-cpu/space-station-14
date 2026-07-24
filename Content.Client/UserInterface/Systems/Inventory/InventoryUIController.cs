@@ -97,7 +97,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
         button.Pressed += ItemPressed;
         button.StoragePressed += StoragePressed;
         button.Hover += SlotButtonHovered;
-        button.Blocked = data.Blockers.Count > 0 || data.Blocked;
+        button.Blocked = _entities.HasComponent<VirtualItemComponent>(data.HeldEntity) || data.IsBlocked();
         button.UpdateBlockers(data.Blockers);
 
         return button;
@@ -431,7 +431,7 @@ public sealed partial class InventoryUIController : UIController, IOnStateEntere
 
     private void EntitySlotUpdate(SlotData data)
     {
-        var blocked = _entities.HasComponent<VirtualItemComponent>(data.Container?.ContainedEntity) || data.Blockers.Count > 0 || data.Blocked;
+        var blocked = _entities.HasComponent<VirtualItemComponent>(data.HeldEntity) || data.IsBlocked();
 
         if (_strippingWindow?.InventoryButtons.GetButton(data.SlotName) is { } inventoryButton)
         {
